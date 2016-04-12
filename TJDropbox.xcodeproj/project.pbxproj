@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		221206C61CBCB8480067B21B /* TJDropboxAuthenticationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 221206C51CBCB8480067B21B /* TJDropboxAuthenticationViewController.m */; };
 		222000091CBCAFD1007EA75A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 222000081CBCAFD1007EA75A /* main.m */; };
 		2220000C1CBCAFD1007EA75A /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 2220000B1CBCAFD1007EA75A /* AppDelegate.m */; };
 		2220000F1CBCAFD1007EA75A /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2220000E1CBCAFD1007EA75A /* ViewController.m */; };
@@ -17,6 +18,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		221206C41CBCB8480067B21B /* TJDropboxAuthenticationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TJDropboxAuthenticationViewController.h; sourceTree = "<group>"; };
+		221206C51CBCB8480067B21B /* TJDropboxAuthenticationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TJDropboxAuthenticationViewController.m; sourceTree = "<group>"; };
 		222000041CBCAFD1007EA75A /* TJDropbox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TJDropbox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		222000081CBCAFD1007EA75A /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		2220000A1CBCAFD1007EA75A /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -59,6 +62,8 @@
 				2220000E1CBCAFD1007EA75A /* ViewController.m */,
 				2220001E1CBCAFE1007EA75A /* TJDropbox.h */,
 				2220001F1CBCAFE1007EA75A /* TJDropbox.m */,
+				221206C41CBCB8480067B21B /* TJDropboxAuthenticationViewController.h */,
+				221206C51CBCB8480067B21B /* TJDropboxAuthenticationViewController.m */,
 				222000101CBCAFD1007EA75A /* Main.storyboard */,
 				222000131CBCAFD1007EA75A /* Assets.xcassets */,
 				222000151CBCAFD1007EA75A /* LaunchScreen.storyboard */,
@@ -156,6 +161,7 @@
 			files = (
 				2220000F1CBCAFD1007EA75A /* ViewController.m in Sources */,
 				2220000C1CBCAFD1007EA75A /* AppDelegate.m in Sources */,
+				221206C61CBCB8480067B21B /* TJDropboxAuthenticationViewController.m in Sources */,
 				222000201CBCAFE1007EA75A /* TJDropbox.m in Sources */,
 				222000091CBCAFD1007EA75A /* main.m in Sources */,
 			);
@@ -299,6 +305,7 @@
 				2220001D1CBCAFD1007EA75A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		2220FFFF1CBCAFD1007EA75A /* Build configuration list for PBXProject "TJDropbox" */ = {
 			isa = XCConfigurationList;
