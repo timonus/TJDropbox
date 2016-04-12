@@ -13,6 +13,7 @@
 		222000121CBCAFD1007EA75A /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 222000101CBCAFD1007EA75A /* Main.storyboard */; };
 		222000141CBCAFD1007EA75A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 222000131CBCAFD1007EA75A /* Assets.xcassets */; };
 		222000171CBCAFD1007EA75A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 222000151CBCAFD1007EA75A /* LaunchScreen.storyboard */; };
+		222000201CBCAFE1007EA75A /* TJDropbox.m in Sources */ = {isa = PBXBuildFile; fileRef = 2220001F1CBCAFE1007EA75A /* TJDropbox.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,8 @@
 		222000131CBCAFD1007EA75A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		222000161CBCAFD1007EA75A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		222000181CBCAFD1007EA75A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2220001E1CBCAFE1007EA75A /* TJDropbox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TJDropbox.h; sourceTree = "<group>"; };
+		2220001F1CBCAFE1007EA75A /* TJDropbox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TJDropbox.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +57,8 @@
 				2220000B1CBCAFD1007EA75A /* AppDelegate.m */,
 				2220000D1CBCAFD1007EA75A /* ViewController.h */,
 				2220000E1CBCAFD1007EA75A /* ViewController.m */,
+				2220001E1CBCAFE1007EA75A /* TJDropbox.h */,
+				2220001F1CBCAFE1007EA75A /* TJDropbox.m */,
 				222000101CBCAFD1007EA75A /* Main.storyboard */,
 				222000131CBCAFD1007EA75A /* Assets.xcassets */,
 				222000151CBCAFD1007EA75A /* LaunchScreen.storyboard */,
@@ -151,6 +156,7 @@
 			files = (
 				2220000F1CBCAFD1007EA75A /* ViewController.m in Sources */,
 				2220000C1CBCAFD1007EA75A /* AppDelegate.m in Sources */,
+				222000201CBCAFE1007EA75A /* TJDropbox.m in Sources */,
 				222000091CBCAFD1007EA75A /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
