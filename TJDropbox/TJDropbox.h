@@ -15,10 +15,10 @@ NS_ASSUME_NONNULL_BEGIN
 // Authentication
 
 /// Used to return the URL used to initate OAuth with Dropbox
-+ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *)redirectURL;
++ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *const)redirectURL;
 
 /// Used to extract the access token returned from Dropbox OAuth
-+ (nullable NSString *)accessTokenFromURL:(NSURL *)url withRedirectURL:(NSURL *)redirectURL;
++ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
 
 @end
 

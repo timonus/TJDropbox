@@ -10,7 +10,7 @@
 
 @implementation TJDropbox
 
-+ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *)redirectURL
++ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *const)redirectURL
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth
     
@@ -23,7 +23,7 @@
     return components.URL;
 }
 
-+ (NSString *)accessTokenFromURL:(NSURL *)url withRedirectURL:(NSURL *)redirectURL
++ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
 {
     NSString *accessToken = nil;
     if ([url.absoluteString hasPrefix:redirectURL.absoluteString]) {
