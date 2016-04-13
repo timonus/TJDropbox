@@ -167,6 +167,39 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     }];
 }
 
+#pragma mark - File Manipulation
+
++ (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
+{
+    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
+        @"path": remotePath
+    }];
+    
+    [[[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSString *resultString = [[(NSHTTPURLResponse *)response allHeaderFields] objectForKey:@"Dropbox-API-Result"];
+        NSDictionary *parsedResult = nil;
+        NSString *errorString = nil;
+        if (resultString.length > 0) {
+            id result = [NSJSONSerialization JSONObjectWithData:[resultString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+            if ([result isKindOfClass:[NSDictionary class]]) {
+                parsedResult = result;
+            } else {
+                errorString = resultString;
+            }
+        }
+        NSDictionary *const dropboxAPIErrorDictionary = [parsedResult objectForKey:@"error"];
+        if (dropboxAPIErrorDictionary && !error) {
+            error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:dropboxAPIErrorDictionary];
+        }
+        
+        if (!error && location) {
+            [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+        }
+        
+        completion(parsedResult, error, errorString);
+    }] resume];
+}
+
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
