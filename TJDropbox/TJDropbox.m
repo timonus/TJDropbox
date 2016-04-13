@@ -10,6 +10,8 @@
 
 @implementation TJDropbox
 
+#pragma mark - Authentication
+
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *const)redirectURL
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth
@@ -38,6 +40,93 @@
         }
     }
     return accessToken;
+}
+
+#pragma mark - Generic
+
++ (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
+{
+    NSURLComponents *const components = [[NSURLComponents alloc] initWithString:@"https://api.dropboxapi.com"];
+    components.path = path;
+    
+    NSMutableURLRequest *const request = [[NSMutableURLRequest alloc] initWithURL:components.URL];
+    request.HTTPMethod = @"POST";
+    NSString *const authorization = [NSString stringWithFormat:@"Bearer %@", accessToken];
+    [request addValue:authorization forHTTPHeaderField:@"Authorization"];
+    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    
+    if (parameters.count > 0) {
+        NSError *error = nil;
+        NSData *const bodyData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
+        if (error) {
+            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
+        }
+        request.HTTPBody = bodyData;
+    }
+    
+    return request;
+}
+
++ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
+{
+    [[[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSDictionary *parsedResult = nil;
+        NSString *errorString = nil;
+        if (data.length > 0) {
+            id result = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if ([result isKindOfClass:[NSDictionary class]]) {
+                parsedResult = result;
+            } else {
+                errorString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            }
+        }
+        completion(parsedResult, error, errorString);
+    }] resume];
+}
+
+#pragma mark - File Inspection
+
++ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor
+{
+    NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
+    NSMutableDictionary *const parameters = [NSMutableDictionary new];
+    [parameters setObject:filePath forKey:@"path"];
+    if (cursor) {
+        [parameters setObject:cursor forKey:@"cursor"];
+    }
+    return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
+}
+
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error, NSString *_Nullable errorString))completion
+{
+    [self listFolderWithPath:path accessToken:accessToken cursor:nil accumulatedFiles:nil completion:completion];
+}
+
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error, NSString *_Nullable errorString))completion;
+{
+    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
+    [self performRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error, NSString *errorString) {
+        if (!error) {
+            NSArray *const files = [parsedResponse objectForKey:@"entries"];
+            NSArray *const newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
+            const BOOL hasMore = [[parsedResponse objectForKey:@"has_more"] boolValue];
+            NSString *const cursor = [parsedResponse objectForKey:@"cursor"];
+            if (hasMore) {
+                if (cursor) {
+                    // Fetch next page
+                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:newlyAccumulatedFiles completion:completion];
+                } else {
+                    // We can't load more without a cursor
+                    completion(nil, error, errorString);
+                }
+            } else {
+                // All files fetched, finish.
+                completion(newlyAccumulatedFiles, error, errorString);
+            }
+        } else {
+            completion(nil, error, errorString);
+        }
+    }];
 }
 
 @end
