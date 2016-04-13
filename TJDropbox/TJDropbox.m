@@ -135,4 +135,12 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     }];
 }
 
++ (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
+        @"path": path
+    }];
+    [self performRequest:request withCompletion:completion];
+}
+
 @end
