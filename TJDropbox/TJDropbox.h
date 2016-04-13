@@ -10,6 +10,9 @@
 
 // Dropbox v2 HTTP API reference: https://www.dropbox.com/developers/documentation/http/documentation
 
+// Notes:
+// - Completion blocks aren't called on main thread.
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface TJDropbox : NSObject
@@ -21,12 +24,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Used to extract the access token returned from Dropbox OAuth
 + (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
-
-// Generic
-
-+ (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters;
-// Note: completion not called on the main thread.
-+ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion;
 
 // File Inspection
 
