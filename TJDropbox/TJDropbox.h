@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+// Dropbox v2 HTTP API reference: https://www.dropbox.com/developers/documentation/http/documentation
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface TJDropbox : NSObject
