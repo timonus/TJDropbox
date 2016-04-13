@@ -8,6 +8,8 @@
 
 #import "TJDropbox.h"
 
+NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
+
 @implementation TJDropbox
 
 #pragma mark - Authentication
@@ -79,6 +81,10 @@
             } else {
                 errorString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             }
+        }
+        NSDictionary *const dropboxAPIErrorDictionary = [parsedResult objectForKey:@"error"];
+        if (dropboxAPIErrorDictionary && !error) {
+            error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:dropboxAPIErrorDictionary];
         }
         completion(parsedResult, error, errorString);
     }] resume];
