@@ -208,4 +208,16 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     [self performRequest:request withCompletion:completion];
 }
 
+#pragma mark - Sharing
+
++ (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/sharing/create_shared_link_with_settings" accessToken:accessToken parameters:@{
+        @"path": path
+    }];
+    [self performRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error, NSString * _Nullable errorString) {
+        completion(parsedResponse[@"url"]);
+    }];
+}
+
 @end
