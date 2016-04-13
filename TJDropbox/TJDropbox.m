@@ -46,38 +46,64 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 
 #pragma mark - Generic
 
-+ (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
++ (NSMutableURLRequest *)requestWithBaseURLString:(NSString *const)baseURLString path:(NSString *const)path accessToken:(NSString *const)accessToken
 {
-    NSURLComponents *const components = [[NSURLComponents alloc] initWithString:@"https://api.dropboxapi.com"];
+    NSURLComponents *const components = [[NSURLComponents alloc] initWithString:baseURLString];
     components.path = path;
     
     NSMutableURLRequest *const request = [[NSMutableURLRequest alloc] initWithURL:components.URL];
     request.HTTPMethod = @"POST";
     NSString *const authorization = [NSString stringWithFormat:@"Bearer %@", accessToken];
     [request addValue:authorization forHTTPHeaderField:@"Authorization"];
-    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-    
-    if (parameters.count > 0) {
-        NSError *error = nil;
-        NSData *const bodyData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
-        if (error) {
-            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
-        }
-        request.HTTPBody = bodyData;
-    }
     
     return request;
 }
 
-+ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
++ (NSData *)parameterDataForParameters:(NSDictionary<NSString *, NSString *> *)parameters
+{
+    NSData *parameterData = nil;
+    if (parameters.count > 0) {
+        NSError *error = nil;
+        parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
+        if (error) {
+            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
+        }
+    }
+    return parameterData;
+}
+
++ (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
+{
+    NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
+    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    request.HTTPBody = [self parameterDataForParameters:parameters];
+    return request;
+}
+
++ (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
+{
+    NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://content.dropboxapi.com" path:path accessToken:accessToken];
+    NSData *const parameterData = [self parameterDataForParameters:parameters];
+    if (parameterData) {
+        NSString *const parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
+        [request setValue:parameterString forHTTPHeaderField:@"Dropbox-API-Arg"];
+    }
+    return request;
+}
+
++ (NSURLSession *)session
 {
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
     });
-    
-    [[session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    return session;
+}
+
++ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
+{
+    [[[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
         NSString *errorString = nil;
         if (data.length > 0) {
