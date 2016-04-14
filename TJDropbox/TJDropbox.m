@@ -218,6 +218,23 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     }] resume];
 }
 
++ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:@{
+        @"path": remotePath
+    }];
+    
+    [[[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSDictionary *parsedResult = nil;
+        NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
+        NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
+        NSData *const resultData = [resultString dataUsingEncoding:NSUTF8StringEncoding];
+        [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+        
+        completion(parsedResult, error);
+    }] resume];
+}
+
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
