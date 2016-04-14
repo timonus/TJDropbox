@@ -105,44 +105,48 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 {
     [[[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        NSString *errorString = nil;
-        if (data.length > 0) {
-            id result = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-            if ([result isKindOfClass:[NSDictionary class]]) {
-                parsedResult = result;
-            } else {
-                errorString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-            }
-        }
-        
-        // Things leading to errors
-        // 1. error returned to this block
-        // 2. dropboxAPIErrorDictionary populated
-        // 3. Status code >= 400
-        // 4. errorString populated
-        
-        NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
-        const NSInteger statusCode = [httpURLResponse statusCode];
-        NSDictionary *const dropboxAPIErrorDictionary = [parsedResult objectForKey:@"error"];
-        
-        if (!error) {
-            if (statusCode >= 400 || dropboxAPIErrorDictionary || !parsedResult) {
-                NSMutableDictionary *const userInfo = [NSMutableDictionary new];
-                if (response) {
-                    [userInfo setObject:response forKey:@"response"];
-                }
-                if (dropboxAPIErrorDictionary) {
-                    [userInfo setObject:dropboxAPIErrorDictionary forKey:@"dropboxError"];
-                }
-                if (errorString) {
-                    [userInfo setObject:errorString forKey:@"errorString"];
-                }
-                error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:userInfo];
-            }
-        }
-        
+        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
     }] resume];
+}
+
++ (void)processResultJSONData:(NSData *const)data response:(NSURLResponse *const)response error:(inout NSError **)error parsedResult:(out NSDictionary **)parsedResult
+{
+    NSString *errorString = nil;
+    if (data.length > 0) {
+        id result = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        if ([result isKindOfClass:[NSDictionary class]]) {
+            *parsedResult = result;
+        } else {
+            errorString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        }
+    }
+    
+    // Things leading to errors
+    // 1. error returned to this block
+    // 2. dropboxAPIErrorDictionary populated
+    // 3. Status code >= 400
+    // 4. errorString populated
+    
+    NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
+    const NSInteger statusCode = [httpURLResponse statusCode];
+    NSDictionary *const dropboxAPIErrorDictionary = [*parsedResult objectForKey:@"error"];
+    
+    if (!*error) {
+        if (statusCode >= 400 || dropboxAPIErrorDictionary || !*parsedResult) {
+            NSMutableDictionary *const userInfo = [NSMutableDictionary new];
+            if (response) {
+                [userInfo setObject:response forKey:@"response"];
+            }
+            if (dropboxAPIErrorDictionary) {
+                [userInfo setObject:dropboxAPIErrorDictionary forKey:@"dropboxError"];
+            }
+            if (errorString) {
+                [userInfo setObject:errorString forKey:@"errorString"];
+            }
+            *error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:userInfo];
+        }
+    }
 }
 
 #pragma mark - File Inspection
@@ -199,23 +203,14 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     }];
     
     [[[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        NSString *resultString = [[(NSHTTPURLResponse *)response allHeaderFields] objectForKey:@"Dropbox-API-Result"];
         NSDictionary *parsedResult = nil;
-        NSString *errorString = nil;
-        if (resultString.length > 0) {
-            id result = [NSJSONSerialization JSONObjectWithData:[resultString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
-            if ([result isKindOfClass:[NSDictionary class]]) {
-                parsedResult = result;
-            } else {
-                errorString = resultString;
-            }
-        }
-        NSDictionary *const dropboxAPIErrorDictionary = [parsedResult objectForKey:@"error"];
-        if (dropboxAPIErrorDictionary && !error) {
-            error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:dropboxAPIErrorDictionary];
-        }
+        NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
+        NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
+        NSData *const resultData = [resultString dataUsingEncoding:NSUTF8StringEncoding];
+        [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
         
         if (!error && location) {
+            // Move file into place
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
         }
         
