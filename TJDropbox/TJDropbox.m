@@ -110,7 +110,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     }] resume];
 }
 
-+ (void)processResultJSONData:(NSData *const)data response:(NSURLResponse *const)response error:(inout NSError **)error parsedResult:(out NSDictionary **)parsedResult
++ (BOOL)processResultJSONData:(NSData *const)data response:(NSURLResponse *const)response error:(inout NSError **)error parsedResult:(out NSDictionary **)parsedResult
 {
     NSString *errorString = nil;
     if (data.length > 0) {
@@ -147,6 +147,8 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
             *error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:userInfo];
         }
     }
+    
+    return *error == nil;
 }
 
 #pragma mark - File Inspection
