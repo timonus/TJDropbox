@@ -101,7 +101,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     return session;
 }
 
-+ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
++ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     [[[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
@@ -114,11 +114,34 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
                 errorString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
             }
         }
+        
+        // Things leading to errors
+        // 1. error returned to this block
+        // 2. dropboxAPIErrorDictionary populated
+        // 3. Status code >= 400
+        // 4. errorString populated
+        
+        NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
+        const NSInteger statusCode = [httpURLResponse statusCode];
         NSDictionary *const dropboxAPIErrorDictionary = [parsedResult objectForKey:@"error"];
-        if (dropboxAPIErrorDictionary && !error) {
-            error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:dropboxAPIErrorDictionary];
+        
+        if (!error) {
+            if (statusCode >= 400 || dropboxAPIErrorDictionary || !parsedResult) {
+                NSMutableDictionary *const userInfo = [NSMutableDictionary new];
+                if (response) {
+                    [userInfo setObject:response forKey:@"response"];
+                }
+                if (dropboxAPIErrorDictionary) {
+                    [userInfo setObject:dropboxAPIErrorDictionary forKey:@"dropboxError"];
+                }
+                if (errorString) {
+                    [userInfo setObject:errorString forKey:@"errorString"];
+                }
+                error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:userInfo];
+            }
         }
-        completion(parsedResult, error, errorString);
+        
+        completion(parsedResult, error);
     }] resume];
 }
 
@@ -135,15 +158,15 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error, NSString *_Nullable errorString))completion
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error))completion
 {
     [self listFolderWithPath:path accessToken:accessToken cursor:nil accumulatedFiles:nil completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error, NSString *_Nullable errorString))completion;
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error))completion;
 {
     NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
-    [self performRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error, NSString *errorString) {
+    [self performRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
             NSArray *const newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
@@ -155,21 +178,21 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
                     [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
-                    completion(nil, error, errorString);
+                    completion(nil, error);
                 }
             } else {
                 // All files fetched, finish.
-                completion(newlyAccumulatedFiles, error, errorString);
+                completion(newlyAccumulatedFiles, error);
             }
         } else {
-            completion(nil, error, errorString);
+            completion(nil, error);
         }
     }];
 }
 
 #pragma mark - File Manipulation
 
-+ (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
++ (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
         @"path": remotePath
@@ -196,11 +219,11 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
         }
         
-        completion(parsedResult, error, errorString);
+        completion(parsedResult, error);
     }] resume];
 }
 
-+ (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error, NSString *_Nullable errorString))completion
++ (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
         @"path": path
@@ -215,7 +238,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/sharing/create_shared_link_with_settings" accessToken:accessToken parameters:@{
         @"path": path
     }];
-    [self performRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error, NSString * _Nullable errorString) {
+    [self performRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"url"]);
     }];
 }
