@@ -101,7 +101,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     return session;
 }
 
-+ (void)performRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)performAPIRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     [[[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
@@ -180,7 +180,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error))completion;
 {
     NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
-    [self performRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
+    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
             NSArray *const newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
@@ -246,7 +246,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
         @"path": path
     }];
-    [self performRequest:request withCompletion:completion];
+    [self performAPIRequest:request withCompletion:completion];
 }
 
 #pragma mark - Sharing
@@ -256,7 +256,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/sharing/create_shared_link_with_settings" accessToken:accessToken parameters:@{
         @"path": path
     }];
-    [self performRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+    [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"url"]);
     }];
 }
