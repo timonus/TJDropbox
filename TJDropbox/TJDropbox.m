@@ -110,6 +110,14 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     }] resume];
 }
 
++ (NSData *)resultDataForContentRequestResponse:(NSURLResponse *const)response
+{
+    NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
+    NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
+    NSData *const resultData = [resultString dataUsingEncoding:NSUTF8StringEncoding];
+    return resultData;
+}
+
 + (BOOL)processResultJSONData:(NSData *const)data response:(NSURLResponse *const)response error:(inout NSError **)error parsedResult:(out NSDictionary **)parsedResult
 {
     NSString *errorString = nil;
@@ -206,9 +214,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     
     [[[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
-        NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
-        NSData *const resultData = [resultString dataUsingEncoding:NSUTF8StringEncoding];
+        NSData *const resultData = [self resultDataForContentRequestResponse:response];
         [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
         
         if (!error && location) {
@@ -228,9 +234,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     
     [[[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
-        NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
-        NSData *const resultData = [resultString dataUsingEncoding:NSUTF8StringEncoding];
+        NSData *const resultData = [self resultDataForContentRequestResponse:response];
         [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
         
         completion(parsedResult, error);
