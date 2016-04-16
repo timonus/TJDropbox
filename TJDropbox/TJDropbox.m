@@ -234,8 +234,7 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
     
     [[[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        NSData *const resultData = [self resultDataForContentRequestResponse:response];
-        [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         
         completion(parsedResult, error);
     }] resume];
