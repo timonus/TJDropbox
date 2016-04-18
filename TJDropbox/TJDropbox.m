@@ -9,6 +9,9 @@
 #import "TJDropbox.h"
 
 NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
+NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
+NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"drpoboxError";
+NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @implementation TJDropbox
 
@@ -144,13 +147,13 @@ NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
         if (statusCode >= 400 || dropboxAPIErrorDictionary || !*parsedResult) {
             NSMutableDictionary *const userInfo = [NSMutableDictionary new];
             if (response) {
-                [userInfo setObject:response forKey:@"response"];
+                [userInfo setObject:response forKey:TJDropboxErrorUserInfoKeyResponse];
             }
             if (dropboxAPIErrorDictionary) {
-                [userInfo setObject:dropboxAPIErrorDictionary forKey:@"dropboxError"];
+                [userInfo setObject:dropboxAPIErrorDictionary forKey:TJDropboxErrorUserInfoKeyDropboxError];
             }
             if (errorString) {
-                [userInfo setObject:errorString forKey:@"errorString"];
+                [userInfo setObject:errorString forKey:TJDropboxErrorUserInfoKeyErrorString];
             }
             *error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:userInfo];
         }

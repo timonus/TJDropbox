@@ -16,6 +16,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const TJDropboxErrorDomain;
+extern NSString *const TJDropboxErrorUserInfoKeyResponse;
+extern NSString *const TJDropboxErrorUserInfoKeyDropboxError;
+extern NSString *const TJDropboxErrorUserInfoKeyErrorString;
 
 @interface TJDropbox : NSObject
 
