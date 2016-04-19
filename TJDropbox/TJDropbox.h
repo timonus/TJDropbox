@@ -48,6 +48,10 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString;
 
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;
 
+// Request Management
+
++ (void)cancelAllRequests;
+
 @end
 
 NS_ASSUME_NONNULL_END

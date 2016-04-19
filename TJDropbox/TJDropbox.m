@@ -119,13 +119,25 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return session;
 }
 
++ (NSHashTable<NSURLSessionTask *> *)tasks
+{
+    static NSHashTable<NSURLSessionTask *> *hashTable = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        hashTable = [NSHashTable weakObjectsHashTable];
+    });
+    return hashTable;
+}
+
 + (void)performAPIRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    [[[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    NSURLSessionTask *const task = [[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
-    }] resume];
+    }];
+    [[self tasks] addObject:task];
+    [task resume];
 }
 
 + (NSData *)resultDataForContentRequestResponse:(NSURLResponse *const)response
@@ -230,7 +242,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         @"path": remotePath
     }];
     
-    [[[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    NSURLSessionTask *const task = [[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
         NSData *const resultData = [self resultDataForContentRequestResponse:response];
         [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
@@ -241,7 +253,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         }
         
         completion(parsedResult, error);
-    }] resume];
+    }];
+    [[self tasks] addObject:task];
+    [task resume];
 }
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -250,12 +264,14 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         @"path": remotePath
     }];
     
-    [[[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         
         completion(parsedResult, error);
-    }] resume];
+    }];
+    [[self tasks] addObject:task];
+    [task resume];
 }
 
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -276,6 +292,15 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"url"]);
     }];
+}
+
+#pragma mark - Request Management
+
++ (void)cancelAllRequests
+{
+    for (NSURLSessionTask *const task in [self tasks]) {
+        [task cancel];
+    }
 }
 
 @end
