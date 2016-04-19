@@ -203,12 +203,12 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
     [self listFolderWithPath:path accessToken:accessToken cursor:nil accumulatedFiles:nil completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error))completion;
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
@@ -223,14 +223,14 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                     [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
-                    completion(nil, error);
+                    completion(nil, nil, error);
                 }
             } else {
                 // All files fetched, finish.
-                completion(newlyAccumulatedFiles, error);
+                completion(newlyAccumulatedFiles, cursor, error);
             }
         } else {
-            completion(nil, error);
+            completion(nil, nil, error);
         }
     }];
 }

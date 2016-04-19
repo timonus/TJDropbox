@@ -36,7 +36,7 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString;
 // File Inspection
 
 // Note: The Dropbox API uses an empty string to denote the root path instead of "/"
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSError *_Nullable error))completion;
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion;
 
 // File Manipulation
 
