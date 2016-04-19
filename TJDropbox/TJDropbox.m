@@ -195,9 +195,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 {
     NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
     NSMutableDictionary *const parameters = [NSMutableDictionary new];
-    [parameters setObject:filePath forKey:@"path"];
-    if (cursor) {
+    if (cursor.length > 0) {
         [parameters setObject:cursor forKey:@"cursor"];
+    } else {
+        [parameters setObject:filePath forKey:@"path"];
     }
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
