@@ -16,9 +16,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const TJDropboxErrorDomain;
-extern NSString *const TJDropboxErrorUserInfoKeyResponse;
-extern NSString *const TJDropboxErrorUserInfoKeyDropboxError;
-extern NSString *const TJDropboxErrorUserInfoKeyErrorString;
+extern NSString *const TJDropboxErrorUserInfoKeyResponse; // For errors with TJDropboxErrorDomain, userInfo may contain an NSURLResponse under this field.
+extern NSString *const TJDropboxErrorUserInfoKeyDropboxError; // For error with TJDropboxErrorDomain, userInfo may contain a Dropbox API error response dictionary under this field.
+extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with TJDropboxErrorDomain, userInfo may contain a string under this field.
 
 @interface TJDropbox : NSObject
 
