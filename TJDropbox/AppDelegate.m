@@ -22,7 +22,7 @@
     self.window.rootViewController = navigationController;
     [self.window makeKeyAndVisible];
     
-    // Fill these in
+#warning Fill these in
     static NSString *const clientIdentifier = nil;
     static NSString *const redirectURLString = nil;
     
