@@ -15,7 +15,7 @@ If you're updating from the v1 Dropbox SDK to TJDropbox, the `+migrateV1TokenToV
     NSString *v1AccessTokenSecret = store.accessTokenSecret;
     
     if (v1AccessToken && v1AccessTokenSecret) {
-        [TJDropbox migrateV1TokenToV2Token:v1AccessToken accessTokenSecret:v1AccessTokenSecret appKey:/*app key*/ appSecret:/*app secret*/ completion:^(NSString * _Nullable token, NSError * _Nullable error) {
+        [TJDropbox migrateV1TokenToV2Token:v1AccessToken accessTokenSecret:v1AccessTokenSecret appKey:/*app key*/ appSecret:/*app secret*/ completion:^(NSString *token, NSError *error) {
             if (token) {
                 // Store token for use with TJDropbox!
             }
@@ -44,7 +44,7 @@ Authentication with TJDropbox is pretty flexible. The simplest way to do it woul
 	[self.navigationController pushViewController:authViewController animated:YES];
 }
 
-- (void)dropboxAuthenticationViewController:(TJDropboxAuthenticationViewController *)viewController didAuthenticateWithAccessToken:(NSString *const)accessToken
+- (void)dropboxAuthenticationViewController:(TJDropboxAuthenticationViewController *)viewController didAuthenticateWithAccessToken:(NSString *)accessToken
 {
 	// Store token for use with TJDropbox!
 }
