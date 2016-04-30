@@ -26,7 +26,7 @@ If you're updating from the v1 Dropbox SDK to TJDropbox, the `+migrateV1TokenToV
 
 TJDropbox doesn't store any credentials and is largely stateless, so storing the resulting token is up to you. I'd recommend using the keychain or `NSUserDefaults`.
 
-## Authenticating
+## <a name="auth">Authenticating</a>
 
 Authentication with TJDropbox is pretty flexible. The simplest way to do it would be to show an instance of the provided `TJDropboxAuthenticationViewController` class.
 
@@ -50,7 +50,7 @@ Authentication with TJDropbox is pretty flexible. The simplest way to do it woul
 }
 ```
 
-However, you can also use `SFSafariViewController` with TJDropbox's `+tokenAuthenticationURLWithClientIdentifier:redirectURL:` and `+accessTokenFromURL:withRedirectURL:` utility methods, or any other web views you'd like!
+However, you can also use `SFSafariViewController`, authenticate with the Dropbox app, or write your own auth using the `+tokenAuthenticationURLWithClientIdentifier:redirectURL:` and `+accessTokenFromURL:withRedirectURL:` utility methods. Advanced auth is detailed [here](Docs/advanced-auth.md).
 
 Just as with migrating a v1 token to v2, TJDropbox doesn't store the credentials, that's up to you.
 
