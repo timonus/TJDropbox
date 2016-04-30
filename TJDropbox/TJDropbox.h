@@ -30,6 +30,12 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 /// Used to extract the access token returned from Dropbox OAuth
 + (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
 
+/// Used to return the URL used to initiate authentication with the installed Dropbox app
++ (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier;
+
+/// Used to extract the access token from Dropbox app authentication
++ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url;
+
 /// Used to migrate a v1 access token to a v2 access token
 + (void)migrateV1TokenToV2Token:(NSString *const)accessToken accessTokenSecret:(NSString *const)accessTokenSecret appKey:(NSString *const)appKey appSecret:(NSString *const)appSecret completion:(void (^const)(NSString *_Nullable token, NSError *_Nullable error))completion;
 

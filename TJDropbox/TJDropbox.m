@@ -47,6 +47,39 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return accessToken;
 }
 
++ (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
+{
+    // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L288-L303
+    // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L274-L282
+    
+    NSURLComponents *const components = [NSURLComponents componentsWithString:@"dbapi-2://1/connect"];
+    NSString *const nonce = [[NSUUID UUID] UUIDString];
+    NSString *const stateString = [NSString stringWithFormat:@"oauth2:%@", nonce];
+    components.queryItems = @[
+        [NSURLQueryItem queryItemWithName:@"k" value:clientIdentifier],
+        [NSURLQueryItem queryItemWithName:@"s" value:@""],
+        [NSURLQueryItem queryItemWithName:@"state" value:stateString]
+    ];
+    return components.URL;
+}
+
++ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url
+{
+    // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L360-L383
+    
+    NSString *accessToken = nil;
+    if ([url.scheme hasPrefix:@"db-"] && [url.host isEqualToString:@"1"] && [url.path isEqualToString:@"/connect"]) {
+        NSURLComponents *const components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
+        for (NSURLQueryItem *queryItem in components.queryItems) {
+            if ([queryItem.name isEqualToString:@"oauth_token_secret"] && queryItem.value.length > 0) {
+                accessToken = queryItem.value;
+                break;
+            }
+        }
+    }
+    return accessToken;
+}
+
 + (void)migrateV1TokenToV2Token:(NSString *const)accessToken accessTokenSecret:(NSString *const)accessTokenSecret appKey:(NSString *const)appKey appSecret:(NSString *const)appSecret completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
 {
     // https://www.dropbox.com/developers/reference/migration-guide#authentication
