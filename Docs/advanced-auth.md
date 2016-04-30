@@ -142,7 +142,7 @@ In your app delegate
 	BOOL didHandle = NO;
 	NSString *dropboxAppAccessToken = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url];
 	NSURL *redirectURL = [NSURL URLWithString:@"**your-apps-url-scheme**://dropboxauth"];
-	NSString *dropboxWebAccessToken = [TJDropbox accessTokenFromURL:url withRedirectURL:];
+	NSString *dropboxWebAccessToken = [TJDropbox accessTokenFromURL:url withRedirectURL:redirectURL];
 	if (dropboxAppAccessToken) {
 		// Success! You've authenticated. Store the token and use it.
 		didHandle = YES;
