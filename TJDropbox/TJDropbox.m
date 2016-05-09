@@ -10,7 +10,7 @@
 
 NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
-NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"drpoboxError";
+NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @implementation TJDropbox
