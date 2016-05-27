@@ -110,35 +110,41 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return request;
 }
 
-+ (NSData *)parameterDataForParameters:(NSDictionary<NSString *, NSString *> *)parameters
++ (NSString *)parameterStringForParameters:(NSDictionary<NSString *, NSString *> *)parameters
 {
-    NSData *parameterData = nil;
+    NSString *parameterString = nil;
     if (parameters.count > 0) {
         NSError *error = nil;
-        parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
+        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
         if (error) {
             NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
+        } else {
+            parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
+            
+            // Ugh http://stackoverflow.com/a/24807307
+            // Asian characters are formatted as ASCII using +asciiEncodeString:, which adds a leading '\'.
+            // NSJSONSerialization likes to turn '\' into '\\', which Dropbox doesn't tolerate.
+            // This is a gross way of fixing it, but it works.
+            // Sucks because we have to round trip from dictionary -> data -> string -> data in a lot of cases.
+            parameterString = [parameterString stringByReplacingOccurrencesOfString:@"\\\\" withString:@"\\"];
         }
     }
-    return parameterData;
+    return parameterString;
 }
 
 + (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
     [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-    request.HTTPBody = [self parameterDataForParameters:parameters];
+    request.HTTPBody = [[self parameterStringForParameters:parameters] dataUsingEncoding:NSUTF8StringEncoding];
     return request;
 }
 
 + (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://content.dropboxapi.com" path:path accessToken:accessToken];
-    NSData *const parameterData = [self parameterDataForParameters:parameters];
-    if (parameterData) {
-        NSString *const parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
-        [request setValue:parameterString forHTTPHeaderField:@"Dropbox-API-Arg"];
-    }
+    NSString *const parameterString = [self parameterStringForParameters:parameters];
+    [request setValue:parameterString forHTTPHeaderField:@"Dropbox-API-Arg"];
     return request;
 }
 
@@ -222,6 +228,30 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return *error == nil;
 }
 
++ (NSString *)asciiEncodeString:(NSString *const)string
+{
+    // Inspired by: https://github.com/dropbox/SwiftyDropbox/blob/6747041b04e337efe0de8f3be14acaf3b6d6d19b/Source/Client.swift#L90-L104
+    // Useful: http://stackoverflow.com/a/1775880
+    // Useful: https://www.objc.io/issues/9-strings/unicode/
+    
+    NSMutableString *const result = string ? [NSMutableString new] : nil;
+    
+    [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
+        const unichar character = [substring characterAtIndex:0];
+        NSString *stringToAppend = nil;
+        if (character > 127) {
+            stringToAppend = [NSString stringWithFormat:@"\\u%04x", character];
+        } else {
+            stringToAppend = substring;
+        }
+        if (stringToAppend) {
+            [result appendString:stringToAppend];
+        }
+    }];
+    
+    return result;
+}
+
 #pragma mark - File Inspection
 
 + (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor
@@ -231,7 +261,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     if (cursor.length > 0) {
         [parameters setObject:cursor forKey:@"cursor"];
     } else {
-        [parameters setObject:filePath forKey:@"path"];
+        [parameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
     }
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
@@ -278,7 +308,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
-        @"path": remotePath
+        @"path": [self asciiEncodeString:remotePath]
     }];
     
     NSURLSessionTask *const task = [[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
@@ -300,7 +330,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:@{
-        @"path": remotePath
+        @"path": [self asciiEncodeString:remotePath]
     }];
     
     NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
@@ -316,7 +346,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
-        @"path": path
+        @"path": [self asciiEncodeString:path]
     }];
     [self performAPIRequest:request withCompletion:completion];
 }
@@ -326,7 +356,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/sharing/create_shared_link_with_settings" accessToken:accessToken parameters:@{
-        @"path": path
+        @"path": [self asciiEncodeString:path]
     }];
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"url"]);
