@@ -23,10 +23,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     
     NSURLComponents *const components = [NSURLComponents componentsWithURL:[NSURL URLWithString:@"https://www.dropbox.com/1/oauth2/authorize"] resolvingAgainstBaseURL:NO];
     components.queryItems = @[
-        [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
-        [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
-        [NSURLQueryItem queryItemWithName:@"response_type" value:@"token"]
-    ];
+                              [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+                              [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
+                              [NSURLQueryItem queryItemWithName:@"response_type" value:@"token"]
+                              ];
     return components.URL;
 }
 
@@ -56,10 +56,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     NSString *const nonce = [[NSUUID UUID] UUIDString];
     NSString *const stateString = [NSString stringWithFormat:@"oauth2:%@", nonce];
     components.queryItems = @[
-        [NSURLQueryItem queryItemWithName:@"k" value:clientIdentifier],
-        [NSURLQueryItem queryItemWithName:@"s" value:@""],
-        [NSURLQueryItem queryItemWithName:@"state" value:stateString]
-    ];
+                              [NSURLQueryItem queryItemWithName:@"k" value:clientIdentifier],
+                              [NSURLQueryItem queryItemWithName:@"s" value:@""],
+                              [NSURLQueryItem queryItemWithName:@"state" value:stateString]
+                              ];
     return components.URL;
 }
 
@@ -256,47 +256,47 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath
                                 accessToken:(NSString *const)accessToken
-                             includeDeleted:(BOOL)includeDeleted
+                                 parameters:(NSDictionary*)parameters
                                      cursor:(nullable NSString *const)cursor
 {
     NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
-    NSMutableDictionary *const parameters = [NSMutableDictionary new];
+    NSMutableDictionary *const requiredParameters = [NSMutableDictionary new];
     if (cursor.length > 0) {
-        [parameters setObject:cursor forKey:@"cursor"];
+        [requiredParameters setObject:cursor forKey:@"cursor"];
     } else {
-        [parameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
+        [requiredParameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
     }
     
-    [parameters setObject:@(includeDeleted) forKey:@"include_deleted"];
+    [requiredParameters addEntriesFromDictionary:parameters];
     
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
 
 + (void)listFolderWithPath:(NSString *const)path
                accessToken:(NSString *const)accessToken
-            includeDeleted:(BOOL)includeDeleted
+                parameters:(NSDictionary*)parameters
                 completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path cursor:nil accessToken:accessToken includeDeleted:includeDeleted completion:completion];
+    [self listFolderWithPath:path cursor:nil accessToken:accessToken parameters:parameters completion:completion];
 }
 
 + (void)listFolderWithPath:(NSString *const)path
                     cursor:(nullable NSString *const)cursor
                accessToken:(NSString *const)accessToken
-            includeDeleted:(BOOL)includeDeleted
+                parameters:(NSDictionary*)parameters
                 completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:nil completion:completion];
+    [self listFolderWithPath:path accessToken:accessToken cursor:cursor parameters:parameters accumulatedFiles:nil completion:completion];
 }
 
 + (void)listFolderWithPath:(NSString *const)path
                accessToken:(NSString *const)accessToken
                     cursor:(NSString *const)cursor
-            includeDeleted:(BOOL)includeDeleted
+                parameters:(NSDictionary*)parameters
           accumulatedFiles:(NSArray *const)accumulatedFiles
                 completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken includeDeleted:includeDeleted cursor:cursor];
+    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken parameters:parameters cursor:cursor];
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
@@ -306,7 +306,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             if (hasMore) {
                 if (cursor) {
                     // Fetch next page
-                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
+                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor parameters:parameters accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
                     completion(nil, nil, error);

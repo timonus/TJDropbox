@@ -51,7 +51,7 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 
 + (void)listFolderWithPath:(NSString *const)path
                accessToken:(NSString *const)accessToken
-            includeDeleted:(BOOL)includeDeleted
+                parameters:(NSDictionary*)parameters
                 completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries,
                                           NSString *_Nullable cursor,
                                           NSError *_Nullable error))completion;
@@ -59,7 +59,7 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 + (void)listFolderWithPath:(NSString *const)path
                     cursor:(nullable NSString *const)cursor
                accessToken:(NSString *const)accessToken
-            includeDeleted:(BOOL)includeDeleted
+                parameters:(NSDictionary*)parameters
                 completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries,
                                           NSString *_Nullable cursor,
                                           NSError *_Nullable error))completion;
