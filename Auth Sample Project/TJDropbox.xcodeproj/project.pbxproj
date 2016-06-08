@@ -17,6 +17,7 @@
 		22B76DE81CD1C9DB0096A166 /* SSKeychainQuery.m in Sources */ = {isa = PBXBuildFile; fileRef = 22B76DE61CD1C9DB0096A166 /* SSKeychainQuery.m */; };
 		22EF0A471CC9CDC4004E074D /* TJDropbox.m in Sources */ = {isa = PBXBuildFile; fileRef = 22EF0A441CC9CDC4004E074D /* TJDropbox.m */; };
 		22EF0A481CC9CDC4004E074D /* TJDropboxAuthenticationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 22EF0A461CC9CDC4004E074D /* TJDropboxAuthenticationViewController.m */; };
+		DC17013A1D0889B400B4709D /* NSError+Dropbox.m in Sources */ = {isa = PBXBuildFile; fileRef = DC1701371D0889B400B4709D /* NSError+Dropbox.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,8 @@
 		22EF0A441CC9CDC4004E074D /* TJDropbox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TJDropbox.m; sourceTree = "<group>"; };
 		22EF0A451CC9CDC4004E074D /* TJDropboxAuthenticationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TJDropboxAuthenticationViewController.h; sourceTree = "<group>"; };
 		22EF0A461CC9CDC4004E074D /* TJDropboxAuthenticationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TJDropboxAuthenticationViewController.m; sourceTree = "<group>"; };
+		DC1701361D0889B400B4709D /* NSError+Dropbox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSError+Dropbox.h"; sourceTree = "<group>"; };
+		DC1701371D0889B400B4709D /* NSError+Dropbox.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSError+Dropbox.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +114,8 @@
 				22EF0A441CC9CDC4004E074D /* TJDropbox.m */,
 				22EF0A451CC9CDC4004E074D /* TJDropboxAuthenticationViewController.h */,
 				22EF0A461CC9CDC4004E074D /* TJDropboxAuthenticationViewController.m */,
+				DC1701361D0889B400B4709D /* NSError+Dropbox.h */,
+				DC1701371D0889B400B4709D /* NSError+Dropbox.m */,
 			);
 			name = TJDropbox;
 			path = ../../TJDropbox;
@@ -186,6 +191,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DC17013A1D0889B400B4709D /* NSError+Dropbox.m in Sources */,
 				2220000C1CBCAFD1007EA75A /* AppDelegate.m in Sources */,
 				22EF0A481CC9CDC4004E074D /* TJDropboxAuthenticationViewController.m in Sources */,
 				22EF0A471CC9CDC4004E074D /* TJDropbox.m in Sources */,
