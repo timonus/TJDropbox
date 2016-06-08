@@ -224,7 +224,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 #pragma mark - File Inspection
 
-+ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor
++ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath
+                                accessToken:(NSString *const)accessToken
+                             includeDeleted:(BOOL)includeDeleted
+                                     cursor:(nullable NSString *const)cursor
 {
     NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
     NSMutableDictionary *const parameters = [NSMutableDictionary new];
@@ -233,22 +236,37 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     } else {
         [parameters setObject:filePath forKey:@"path"];
     }
+    
+    [parameters setObject:@(includeDeleted) forKey:@"include_deleted"];
+    
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path
+               accessToken:(NSString *const)accessToken
+            includeDeleted:(BOOL)includeDeleted
+                completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path cursor:nil accessToken:accessToken completion:completion];
+    [self listFolderWithPath:path cursor:nil accessToken:accessToken includeDeleted:includeDeleted completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path
+                    cursor:(nullable NSString *const)cursor
+               accessToken:(NSString *const)accessToken
+            includeDeleted:(BOOL)includeDeleted
+                completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:nil completion:completion];
+    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:nil completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path
+               accessToken:(NSString *const)accessToken
+                    cursor:(NSString *const)cursor
+            includeDeleted:(BOOL)includeDeleted
+          accumulatedFiles:(NSArray *const)accumulatedFiles
+                completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
+    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken includeDeleted:includeDeleted cursor:cursor];
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
@@ -258,7 +276,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             if (hasMore) {
                 if (cursor) {
                     // Fetch next page
-                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:newlyAccumulatedFiles completion:completion];
+                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
                     completion(nil, nil, error);
@@ -273,13 +291,54 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     }];
 }
 
++ (void)getFileInfoAtPath:(NSString *const)remotePath
+              accessToken:(NSString *const)accessToken
+               completion:(void (^const)(NSDictionary *_Nullable entry,
+                                         NSError *_Nullable error))completion
+{
+    NSDictionary *parameters = @{@"path" : remotePath};
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:parameters];
+    
+    [self performAPIRequest:request
+             withCompletion:completion];
+    
+    /*
+     EXAMPLE RESPONSE:
+     {
+     ".tag": "file",
+     "name": "Prime_Numbers.txt",
+     "path_lower": "/homework/math/prime_numbers.txt",
+     "path_display": "/Homework/math/Prime_Numbers.txt",
+     "id": "id:a4ayc_80_OEAAAAAAAAAXw",
+     "client_modified": "2015-05-12T15:50:38Z",
+     "server_modified": "2015-05-12T15:50:38Z",
+     "rev": "a1c10ce0dd78",
+     "size": 7212,
+     "sharing_info": {
+     "read_only": true,
+     "parent_shared_folder_id": "84528192421",
+     "modified_by": "dbid:AAH4f99T0taONIb-OurWxbNQ6ywGRopQngc"
+     },
+     "has_explicit_shared_members": false
+     }
+     */
+}
+
+
 #pragma mark - File Manipulation
 
-+ (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)downloadFileAtPath:(NSString *const)remotePath
+                    toPath:(NSString *const)localPath
+               accessToken:(NSString *const)accessToken
+                parameters:(nullable NSDictionary*)parameters
+                completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
-        @"path": remotePath
-    }];
+    NSMutableDictionary *fullParameters = @{@"path" : remotePath}.mutableCopy;
+    if (parameters) {
+        [fullParameters addEntriesFromDictionary:parameters];
+    }
+    
+    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:fullParameters];
     
     NSURLSessionTask *const task = [[self session] downloadTaskWithRequest:request completionHandler:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
@@ -288,6 +347,15 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         
         if (!error && location) {
             // Move file into place
+            if ([[NSFileManager defaultManager] fileExistsAtPath:localPath]) {
+                [[NSFileManager defaultManager] removeItemAtPath:localPath error:&error];
+                
+                if (error) {
+                    NSLog(@"Problem moving downloaded file: %@", error.localizedDescription);
+                }
+                error = nil;
+            }
+            
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
         }
         
@@ -297,11 +365,21 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadFileAtPath:(NSString *const)localPath
+                  toPath:(NSString *const)remotePath
+             accessToken:(NSString *const)accessToken
+              parameters:(nullable NSDictionary*)parameters
+              completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:@{
-        @"path": remotePath
-    }];
+    
+    
+    NSMutableDictionary *fullParameters = @{@"path" : remotePath}.mutableCopy;
+    if (parameters) {
+        [fullParameters addEntriesFromDictionary:parameters];
+    }
+    
+    
+    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:fullParameters];
     
     NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
@@ -313,21 +391,64 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)moveFileAtPath:(NSString *const)fromPath
+                toPath:(NSString *const)toPath
+           accessToken:(NSString *const)accessToken
+            parameters:(nullable NSDictionary*)parameters
+            completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
-        @"path": path
-    }];
+    if (!fromPath || !toPath) {
+        NSLog(@"You can't move a file if you don't provide paths!");
+        if (completion) {
+            
+            NSError *pathError = [NSError errorWithDomain:TJDropboxErrorDomain
+                                                     code:-1
+                                                 userInfo:@{NSLocalizedDescriptionKey : @"You can't move a file if you don't provide for/to paths!"}];
+            
+            completion(nil, pathError);
+        }
+        return;
+    }
+    
+    NSMutableDictionary *fullParameters = @{@"from_path" : fromPath,
+                                            @"to_path" : toPath}.mutableCopy;
+    if (parameters) {
+        [fullParameters addEntriesFromDictionary:parameters];
+    }
+    
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move" accessToken:accessToken parameters:fullParameters];
+    
+    [self performAPIRequest:request withCompletion:completion];
+}
+
++ (void)deleteFileAtPath:(NSString *const)path
+             accessToken:(NSString *const)accessToken
+              parameters:(nullable NSDictionary*)parameters
+              completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSMutableDictionary *fullParameters = @{@"path" : path}.mutableCopy;
+    if (parameters) {
+        [fullParameters addEntriesFromDictionary:parameters];
+    }
+    
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:fullParameters];
+    
     [self performAPIRequest:request withCompletion:completion];
 }
 
 #pragma mark - Sharing
 
-+ (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion
++ (void)getSharedLinkForFileAtPath:(NSString *const)path
+                       accessToken:(NSString *const)accessToken
+                        parameters:(nullable NSDictionary*)parameters
+                        completion:(void (^const)(NSString *_Nullable urlString))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/sharing/create_shared_link_with_settings" accessToken:accessToken parameters:@{
-        @"path": path
-    }];
+    NSMutableDictionary *fullParameters = @{@"path" : path}.mutableCopy;
+    if (parameters) {
+        [fullParameters addEntriesFromDictionary:parameters];
+    }
+    
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/sharing/create_shared_link_with_settings" accessToken:accessToken parameters:fullParameters];
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"url"]);
     }];

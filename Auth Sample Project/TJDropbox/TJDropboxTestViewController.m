@@ -99,7 +99,13 @@ static NSString *const kRedirectURLString = nil;
         NSString *remotePath = [NSString stringWithFormat:@"/%@", filename];
         [@"Hello World!" writeToFile:localPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
         
-        [TJDropbox uploadFileAtPath:localPath toPath:remotePath accessToken:self.accessToken completion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+        
+        [TJDropbox uploadFileAtPath:localPath
+                             toPath:remotePath
+                        accessToken:self.accessToken
+                         parameters:nil
+                         completion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error)
+        {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (error) {
                     self.outputTextView.text = [error description];
