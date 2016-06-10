@@ -395,3 +395,23 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 }
 
 @end
+
+@implementation NSError (TJDropbox)
+
+- (BOOL)tj_isPathNotFoundError
+{
+    BOOL isPathNotFoundError = NO;
+    if ([self.domain isEqualToString:TJDropboxErrorDomain]) {
+        NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
+        NSString *const tag = dropboxErrorDictionary[@".tag"];
+        if ([tag isEqualToString:@"path"]) {
+            NSString *const pathTag = dropboxErrorDictionary[@"path"][@".tag"];
+            if ([pathTag isEqualToString:@"not_found"]) {
+                isPathNotFoundError = YES;
+            }
+        }
+    }
+    return isPathNotFoundError;
+}
+
+@end

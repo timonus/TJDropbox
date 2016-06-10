@@ -66,4 +66,10 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 
 @end
 
+@interface NSError (TJDropbox)
+
+@property (nonatomic, assign, readonly) BOOL tj_isPathNotFoundError;
+
+@end
+
 NS_ASSUME_NONNULL_END
