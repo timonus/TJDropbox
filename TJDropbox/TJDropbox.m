@@ -303,6 +303,15 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     }];
 }
 
++ (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:@{
+        @"path" : [self asciiEncodeString:remotePath]
+    }];
+    
+    [self performAPIRequest:request withCompletion:completion];
+}
+
 #pragma mark - File Manipulation
 
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
