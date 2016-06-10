@@ -254,7 +254,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 #pragma mark - File Inspection
 
-+ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor
++ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted
 {
     NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
     NSMutableDictionary *const parameters = [NSMutableDictionary new];
@@ -263,22 +263,25 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     } else {
         [parameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
     }
+    if (includeDeleted) {
+        [parameters setObject:@YES forKey:@"include_deleted"];
+    }
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
 
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path cursor:nil accessToken:accessToken completion:completion];
+    [self listFolderWithPath:path cursor:nil includeDeleted:NO accessToken:accessToken completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:nil completion:completion];
+    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:nil completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
+    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted];
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
@@ -288,7 +291,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             if (hasMore) {
                 if (cursor) {
                     // Fetch next page
-                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:newlyAccumulatedFiles completion:completion];
+                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
                     completion(nil, nil, error);
