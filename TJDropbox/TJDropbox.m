@@ -254,7 +254,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 #pragma mark - File Inspection
 
-+ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor
++ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted
 {
     NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
     NSMutableDictionary *const parameters = [NSMutableDictionary new];
@@ -263,22 +263,25 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     } else {
         [parameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
     }
+    if (includeDeleted) {
+        [parameters setObject:@YES forKey:@"include_deleted"];
+    }
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
 
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path cursor:nil accessToken:accessToken completion:completion];
+    [self listFolderWithPath:path cursor:nil includeDeleted:NO accessToken:accessToken completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:nil completion:completion];
+    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:nil completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor];
+    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted];
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
@@ -288,7 +291,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             if (hasMore) {
                 if (cursor) {
                     // Fetch next page
-                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor accumulatedFiles:newlyAccumulatedFiles completion:completion];
+                    [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
                     completion(nil, nil, error);
@@ -301,6 +304,15 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             completion(nil, nil, error);
         }
     }];
+}
+
++ (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:@{
+        @"path" : [self asciiEncodeString:remotePath]
+    }];
+    
+    [self performAPIRequest:request withCompletion:completion];
 }
 
 #pragma mark - File Manipulation
@@ -343,6 +355,16 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
++ (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move" accessToken:accessToken parameters:@{
+        @"from_path" : [self asciiEncodeString:fromPath],
+        @"to_path" : [self asciiEncodeString:toPath]
+    }];
+    
+    [self performAPIRequest:request withCompletion:completion];
+}
+
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
@@ -370,6 +392,26 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     for (NSURLSessionTask *const task in [self tasks]) {
         [task cancel];
     }
+}
+
+@end
+
+@implementation NSError (TJDropbox)
+
+- (BOOL)tj_isPathNotFoundError
+{
+    BOOL isPathNotFoundError = NO;
+    if ([self.domain isEqualToString:TJDropboxErrorDomain]) {
+        NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
+        NSString *const tag = dropboxErrorDictionary[@".tag"];
+        if ([tag isEqualToString:@"path"]) {
+            NSString *const pathTag = dropboxErrorDictionary[@"path"][@".tag"];
+            if ([pathTag isEqualToString:@"not_found"]) {
+                isPathNotFoundError = YES;
+            }
+        }
+    }
+    return isPathNotFoundError;
 }
 
 @end
