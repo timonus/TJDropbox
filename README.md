@@ -61,7 +61,9 @@ Once authenticated, TJDropbox is capable of doing the following things
 - Listing the contents of a folder
 - Downloading files
 - Uploading files
+- Moving files
 - Deleting files
+- Getting info about files
 - Getting shareable links to files
 
 The methods for these are all listed in TJDropbox.h.
