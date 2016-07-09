@@ -135,8 +135,12 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
-    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
     request.HTTPBody = [[self parameterStringForParameters:parameters] dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if (request.HTTPBody != nil) {
+        [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    }
+    
     return request;
 }
 
