@@ -135,8 +135,12 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
-    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
     request.HTTPBody = [[self parameterStringForParameters:parameters] dataUsingEncoding:NSUTF8StringEncoding];
+    
+    if (request.HTTPBody != nil) {
+        [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    }
+    
     return request;
 }
 
@@ -383,6 +387,14 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"url"]);
     }];
+}
+
+#pragma mark - Users
+
++ (void)getSpaceUsageForUserWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/users/get_space_usage" accessToken:accessToken parameters:nil];
+    [self performAPIRequest:request withCompletion:completion];
 }
 
 #pragma mark - Request Management

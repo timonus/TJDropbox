@@ -60,6 +60,10 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;
 
+// Users
+
++ (void)getSpaceUsageForUserWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
 // Request Management
 
 + (void)cancelAllRequests;
