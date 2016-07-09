@@ -394,9 +394,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)getSpaceUsageForUserWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/users/get_space_usage" accessToken:accessToken parameters:nil];
-    [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
-        completion(parsedResponse, error);
-    }];
+    [self performAPIRequest:request withCompletion:completion];
 }
 
 #pragma mark - Request Management
