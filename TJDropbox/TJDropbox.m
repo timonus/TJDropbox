@@ -359,6 +359,86 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
++ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/start" accessToken:accessToken parameters:nil];
+    [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
+    
+    NSURLSessionTask *const task = [[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSDictionary *parsedResult = nil;
+        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        
+        NSString *const sessionIdentifier = parsedResult[@"session_id"];
+        if (sessionIdentifier) {
+            NSFileHandle *const fileHandle = [NSFileHandle fileHandleForReadingAtPath:localPath];
+            [self uploadChunkFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+        } else {
+            completion(parsedResult, error);
+        }
+    }];
+    [[self tasks] addObject:task];
+    [task resume];
+}
+
++ (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSNumber *const offset = @(fileHandle.offsetInFile);
+    static const size_t kChunkSize = 5 * 1000 * 1000; // 5MB seems reasonable.
+    NSData *const chunk = [fileHandle readDataOfLength:kChunkSize];
+    const BOOL isLastChunk = chunk.length < kChunkSize;
+    
+    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/append_v2" accessToken:accessToken parameters:@{
+        @"cursor": @{
+            @"session_id": sessionIdentifier,
+            @"offset": offset
+        },
+        @"close": @(isLastChunk)
+    }];
+    [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
+    
+    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromData:chunk completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSDictionary *parsedResult = nil;
+        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        
+        if (error && [(NSHTTPURLResponse *)response statusCode] != 200) {
+            // Error encountered
+            completion(parsedResult, error);
+        } else if (isLastChunk) {
+            // Finish the upload
+            [self finishLargeUploadFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+        } else {
+            // Upload next chunk
+            [self uploadChunkFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+        }
+    }];
+    [[self tasks] addObject:task];
+    [task resume];
+}
+
++ (void)finishLargeUploadFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSNumber *const offset = @(fileHandle.offsetInFile);
+    
+    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/finish" accessToken:accessToken parameters: @{
+        @"cursor": @{
+            @"session_id": sessionIdentifier,
+            @"offset": offset
+        },
+        @"commit": @{
+            @"path": [self asciiEncodeString:remotePath]
+        }
+    }];
+    [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
+    
+    NSURLSessionTask *const task = [[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSDictionary *parsedResult = nil;
+        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        completion(parsedResult, error);
+    }];
+    [[self tasks] addObject:task];
+    [task resume];
+}
+
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move" accessToken:accessToken parameters:@{
