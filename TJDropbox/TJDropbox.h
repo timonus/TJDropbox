@@ -20,6 +20,12 @@ extern NSString *const TJDropboxErrorUserInfoKeyResponse; // For errors with TJD
 extern NSString *const TJDropboxErrorUserInfoKeyDropboxError; // For error with TJDropboxErrorDomain, userInfo may contain a Dropbox API error response dictionary under this field.
 extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with TJDropboxErrorDomain, userInfo may contain a string under this field.
 
+typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
+    TJDropboxSharedLinkTypeDefault,
+    TJDropboxSharedLinkTypeShort, // Uses deprecated endpoint to generate db.tt links
+    TJDropboxSharedLinkTypeDirect // Changes result hosts to dl.dropboxusercontent.com
+};
+
 @interface TJDropbox : NSObject
 
 // Authentication
@@ -63,6 +69,7 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 // Sharing
 
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;
++ (void)getSharedLinkForFileAtPath:(NSString *const)path linkType:(const TJDropboxSharedLinkType)linkType uploadOrSaveInProgress:(const BOOL)uploadOrSaveInProgress accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;
 
 // Users
 
