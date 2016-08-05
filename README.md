@@ -99,4 +99,5 @@ All the externally exposed methods in TJDropbox are built on top of these utilit
 ## Apps using TJDropbox
 
 - [Close-up](https://itunes.apple.com/app/id515789135)
-- [Songbook Simple 2.0](http://itunes.apple.com/us/app/songbook-simple/id728359573?mt=8)
+- [Songbook Simple 2.0](http://itunes.apple.com/app/id728359573)
+- [Muse Monitor](https://itunes.apple.com/app/id988527143)
