@@ -13,6 +13,38 @@ NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
 NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
+@interface TJDropboxURLSessionTaskDelegate : NSObject <NSURLSessionTaskDelegate>
+
+@property (nonatomic, strong) NSMutableDictionary *progressBlocksForTasks;
+
+@end
+
+@implementation TJDropboxURLSessionTaskDelegate
+
+- (instancetype)init
+{
+    if (self = [super init]) {
+        self.progressBlocksForTasks = [NSMutableDictionary new];
+    }
+    return self;
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didSendBodyData:(int64_t)bytesSent totalBytesSent:(int64_t)totalBytesSent totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
+{
+    void (^progressBlock)(CGFloat progress) = self.progressBlocksForTasks[task];
+    
+    if (progressBlock && totalBytesExpectedToSend > 0) {
+        progressBlock((CGFloat)totalBytesSent / totalBytesExpectedToSend);
+    }
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error
+{
+    [self.progressBlocksForTasks removeObjectForKey:task];
+}
+
+@end
+
 @implementation TJDropbox
 
 #pragma mark - Authentication
@@ -152,12 +184,22 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return request;
 }
 
++ (TJDropboxURLSessionTaskDelegate *)taskDelegate
+{
+    static TJDropboxURLSessionTaskDelegate *taskDelegate = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        taskDelegate = [[TJDropboxURLSessionTaskDelegate alloc] init];
+    });
+    return taskDelegate;
+}
+
 + (NSURLSession *)session
 {
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration]];
+        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:[self taskDelegate] delegateQueue:[NSOperationQueue mainQueue]];
     });
     return session;
 }
@@ -345,6 +387,11 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
+    [self uploadFileAtPath:localPath toPath:remotePath accessToken:accessToken progressBlock:nil completion:completion];
+}
+
++ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
     NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:@{
         @"path": [self asciiEncodeString:remotePath]
     }];
@@ -355,6 +402,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         
         completion(parsedResult, error);
     }];
+    if (progressBlock) {
+        [[[self taskDelegate] progressBlocksForTasks] setObject:[progressBlock copy] forKey:task];
+    }
     [[self tasks] addObject:task];
     [task resume];
 }
