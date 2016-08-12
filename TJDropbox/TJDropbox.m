@@ -333,6 +333,14 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return result;
 }
 
+#pragma mark - Account Info
+
++ (void)getAccountInformationWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/users/get_current_account" accessToken:accessToken parameters:nil];
+    [self performAPIRequest:request withCompletion:completion];
+}
+
 #pragma mark - File Inspection
 
 + (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted

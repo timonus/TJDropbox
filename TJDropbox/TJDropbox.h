@@ -45,6 +45,10 @@ typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
 /// Used to migrate a v1 access token to a v2 access token
 + (void)migrateV1TokenToV2Token:(NSString *const)accessToken accessTokenSecret:(NSString *const)accessTokenSecret appKey:(NSString *const)appKey appSecret:(NSString *const)appSecret completion:(void (^const)(NSString *_Nullable token, NSError *_Nullable error))completion;
 
+// Account Info
+
++ (void)getAccountInformationWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
 // File Inspection
 
 // Note: The Dropbox API uses an empty string to denote the root path instead of "/"
