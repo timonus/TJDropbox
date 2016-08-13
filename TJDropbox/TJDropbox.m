@@ -13,9 +13,12 @@ NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
 NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
-@interface TJDropboxURLSessionTaskDelegate : NSObject <NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate>
+@interface TJDropboxURLSessionTaskDelegate : NSObject <NSURLSessionDataDelegate, NSURLSessionDownloadDelegate>
 
-@property (nonatomic, strong) NSMutableDictionary *progressBlocksForUploadTasks;
+@property (nonatomic, strong) NSMutableDictionary *progressBlocksForDataTasks;
+@property (nonatomic, strong) NSMutableDictionary<NSURLSessionTask *, NSMutableData *> *accumulatedDataForDataTasks;
+@property (nonatomic, strong) NSMutableDictionary *completionBlocksForDataTasks;
+
 @property (nonatomic, strong) NSMutableDictionary *progressBlocksForDownloadTasks;
 @property (nonatomic, strong) NSMutableDictionary *completionBlocksForDownloadTasks;
 
@@ -26,7 +29,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 - (instancetype)init
 {
     if (self = [super init]) {
-        self.progressBlocksForUploadTasks = [NSMutableDictionary new];
+        self.progressBlocksForDataTasks = [NSMutableDictionary new];
+        self.accumulatedDataForDataTasks = [NSMutableDictionary new];
+        self.completionBlocksForDataTasks = [NSMutableDictionary new];
+        
         self.progressBlocksForDownloadTasks = [NSMutableDictionary new];
         self.completionBlocksForDownloadTasks = [NSMutableDictionary new];
     }
@@ -35,7 +41,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didSendBodyData:(int64_t)bytesSent totalBytesSent:(int64_t)totalBytesSent totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
 {
-    void (^progressBlock)(CGFloat progress) = self.progressBlocksForUploadTasks[task];
+    void (^progressBlock)(CGFloat progress) = self.progressBlocksForDataTasks[task];
     
     if (progressBlock && totalBytesExpectedToSend > 0) {
         progressBlock((CGFloat)totalBytesSent / totalBytesExpectedToSend);
@@ -51,14 +57,24 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     }
 }
 
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)task didReceiveData:(NSData *)data
+{
+    NSMutableData *accumulatedData = self.accumulatedDataForDataTasks[task];
+    if (accumulatedData) {
+        [accumulatedData appendData:data];
+    } else {
+        self.accumulatedDataForDataTasks[task] = [data mutableCopy];
+    }
+}
+
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error
 {
-    if ([task isKindOfClass:[NSURLSessionDownloadTask class]]) {
-        // Catches the case where the file wasn't downloaded.
-        [self tryCompleteDownloadTask:(NSURLSessionDownloadTask *)task location:nil];
-    }
+    // Catches the case where the task failed.
+    [self tryCompleteTask:task location:nil data:self.accumulatedDataForDataTasks[task]];
     
-    [self.progressBlocksForUploadTasks removeObjectForKey:task];
+    [self.progressBlocksForDataTasks removeObjectForKey:task];
+    [self.accumulatedDataForDataTasks removeObjectForKey:task];
+    [self.completionBlocksForDataTasks removeObjectForKey:task];
     [self.progressBlocksForDownloadTasks removeObjectForKey:task];
     [self.completionBlocksForDownloadTasks removeObjectForKey:task];
 }
@@ -66,15 +82,20 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 - (void)URLSession:(NSURLSession *)session downloadTask:(NSURLSessionDownloadTask *)task didFinishDownloadingToURL:(NSURL *)location
 {
     // Catches the case where the file was downloaded successfully.
-    [self tryCompleteDownloadTask:task location:location];
+    [self tryCompleteTask:task location:location data:nil];
 }
 
-- (void)tryCompleteDownloadTask:(NSURLSessionDownloadTask *const)task location:(NSURL *const)location
+- (void)tryCompleteTask:(NSURLSessionTask *const)task location:(NSURL *const)location data:(NSData *const)data
 {
-    void (^completionBlock)(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) = self.completionBlocksForDownloadTasks[task];
-    if (completionBlock) {
-        completionBlock(location, task.response, task.error);
+    void (^downloadCompletionBlock)(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) = self.completionBlocksForDownloadTasks[task];
+    if (downloadCompletionBlock) {
+        downloadCompletionBlock(location, task.response, task.error);
         [self.completionBlocksForDownloadTasks removeObjectForKey:task];
+    } else {
+        void (^dataCompletionBlock)(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) = self.completionBlocksForDataTasks[task];
+        if (dataCompletionBlock) {
+            dataCompletionBlock(self.accumulatedDataForDataTasks[task], task.response, task.error);
+        }
     }
 }
 
@@ -234,7 +255,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:[self taskDelegate] delegateQueue:[NSOperationQueue mainQueue]];
+        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:[self taskDelegate] delegateQueue:nil];
     });
     return session;
 }
@@ -448,14 +469,16 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         @"path": [self asciiEncodeString:remotePath]
     }];
     
-    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath]];
+    
+    [[[self taskDelegate] completionBlocksForDataTasks] setObject:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         
         completion(parsedResult, error);
-    }];
+    } forKey:task];
     if (progressBlock) {
-        [[[self taskDelegate] progressBlocksForUploadTasks] setObject:[progressBlock copy] forKey:task];
+        [[[self taskDelegate] progressBlocksForDataTasks] setObject:progressBlock forKey:task];
     }
     [[self tasks] addObject:task];
     [task resume];
