@@ -93,7 +93,7 @@ All the externally exposed methods in TJDropbox are built on top of these utilit
 
 - Better sample project
 - More documentation
-- Cocoapods support
+- CocoaPods support
 - Carthage support
 - Tests
 
