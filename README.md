@@ -2,6 +2,14 @@
 
 TJDropbox is a Dropbox v2 client library written in Objective-C. Dropbox provides a v2 SDK for iOS, but it's [only compatible with Swift](https://www.dropboxforum.com/hc/en-us/community/posts/204715229-To-use-API-v2-in-iOS-platform-we-need-an-objective-C-version). If you're migrating from Dropbox's v1 SDK to v2 and don't want to adopt Swift, this is a way to do so. I developed this in order to port [Close-up](https://itunes.apple.com/app/id515789135) to Dropbox v2.
 
+## Installation
+
+You can install TJDropbox with [CocoaPods](https://cocoapods.org).
+
+```
+pod 'TJDropbox'
+```
+
 ## Migrating Dropbox SDK v1 Tokens
 
 If you're updating from the v1 Dropbox SDK to TJDropbox, the `+migrateV1TokenToV2Token:accessTokenSecret:appKey:appSecret:completion:` method can be used to migrate your access token.
@@ -93,7 +101,6 @@ All the externally exposed methods in TJDropbox are built on top of these utilit
 
 - Better sample project
 - More documentation
-- CocoaPods support
 - Carthage support
 - Tests
 
