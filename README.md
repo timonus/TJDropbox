@@ -4,11 +4,7 @@ TJDropbox is a Dropbox v2 client library written in Objective-C. Dropbox provide
 
 ## Installation
 
-You can install TJDropbox with [CocoaPods](https://cocoapods.org).
-
-```
-pod 'TJDropbox'
-```
+You can use TJDropbox by adding all the source files from the TJDropbox/ directory to your project, or with [CocoaPods](https://cocoapods.org).
 
 ## Migrating Dropbox SDK v1 Tokens
 
