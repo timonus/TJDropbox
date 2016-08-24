@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "TJDropbox"
-  s.version      = "0.4"
+  s.version      = "0.5"
   s.summary      = "A Dropbox v2 client library written in Objective-C"
   s.description  = "Dropbox provides a v2 SDK for iOS, but it's only compatible with Swift."
 
@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
 
   s.author       = "Tim Johnsen"
 
-  s.source       = { :git => "https://github.com/timonus/TJDropbox.git", :tag => "0.4" }
+  s.source       = { :git => "https://github.com/timonus/TJDropbox.git", :tag => "0.5" }
 
   s.source_files      = "TJDropbox/*.{h,m}"
   s.osx.exclude_files = "TJDropbox/TJDropboxAuthenticationViewController.{h,m}"
