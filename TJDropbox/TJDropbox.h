@@ -20,12 +20,14 @@ extern NSString *const TJDropboxErrorUserInfoKeyResponse; // For errors with TJD
 extern NSString *const TJDropboxErrorUserInfoKeyDropboxError; // For error with TJDropboxErrorDomain, userInfo may contain a Dropbox API error response dictionary under this field.
 extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with TJDropboxErrorDomain, userInfo may contain a string under this field.
 
+/// Sharing links enum
 typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
     TJDropboxSharedLinkTypeDefault,
     TJDropboxSharedLinkTypeShort, // Uses deprecated endpoint to generate db.tt links
     TJDropboxSharedLinkTypeDirect // Changes result hosts to dl.dropboxusercontent.com
 };
 
+// A Dropbox v2 client library written in Objective-C
 @interface TJDropbox : NSObject
 
 // Authentication
@@ -52,28 +54,48 @@ typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
 // File Inspection
 
 // Note: The Dropbox API uses an empty string to denote the root path instead of "/"
+
+/// List folder
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion;
 
+/// List folder with cursor
 + (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion;
 
+/// Get file
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion;
 
 // File Manipulation
 
+/// Download file
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
+/// Download file with progress
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
+/// Upload file
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
+/// Upload file with progress
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
-/// Intended for files larger than 150MB. Performs chunked uploads, 5MB per chunk.
+
+/// Upload large file (over 150MB) with chunked uploads, 5MB per chunk
 + (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
+/// Save contents of a URL
 + (void)saveContentsOfURL:(NSURL *const)url toPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
+/// Delete file
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
 
+/// Move file
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
 
 // Sharing
 
+/// Get shared link
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;
+
+/// Get shared link for a file being uploaded/saved
 + (void)getSharedLinkForFileAtPath:(NSString *const)path linkType:(const TJDropboxSharedLinkType)linkType uploadOrSaveInProgress:(const BOOL)uploadOrSaveInProgress accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;
 
 // Users
@@ -86,8 +108,10 @@ typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
 
 @end
 
+/// TJDropbox error
 @interface NSError (TJDropbox)
 
+// Boolean that specifies if the path was not found
 @property (nonatomic, assign, readonly) BOOL tj_isPathNotFoundError;
 
 @end
