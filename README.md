@@ -14,7 +14,7 @@ pod 'TJDropbox'
 
 If you're updating from the v1 Dropbox SDK to TJDropbox, the `+migrateV1TokenToV2Token:accessTokenSecret:appKey:appSecret:completion:` method can be used to migrate your access token.
 
-```
+```objc
 - (void)migrate
 {
     NSString *userId = [[[DBSession sharedSession] userIds] firstObject];;
@@ -38,7 +38,7 @@ TJDropbox doesn't store any credentials and is largely stateless, so storing the
 
 Authentication with TJDropbox is pretty flexible. The simplest way to do it would be to show an instance of the provided `TJDropboxAuthenticationViewController` class.
 
-```
+```objc
 - (void)authenticate
 {
 	TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:/*identifier*/ redirectURL:/*redirect URL*/ delegate:self];
