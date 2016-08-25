@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
 
   s.author       = "Tim Johnsen"
 
-  s.source       = { :git => "https://github.com/timonus/TJDropbox.git", :tag => "0.5" }
+  s.source       = { :git => "https://github.com/timonus/TJDropbox.git", :tag => s.version }
 
   s.source_files      = "TJDropbox/*.{h,m}"
   s.osx.exclude_files = "TJDropbox/TJDropboxAuthenticationViewController.{h,m}"
