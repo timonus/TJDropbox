@@ -14,9 +14,10 @@ Pod::Spec.new do |s|
 
   s.source_files      = "TJDropbox/*.{h,m}"
   s.osx.exclude_files = "TJDropbox/TJDropboxAuthenticationViewController.{h,m}"
+  s.tvos.exclude_files = "TJDropbox/TJDropboxAuthenticationViewController.{h,m}"
 
   s.ios.deployment_target = "8.0"
   s.osx.deployment_target = "10.9"
+  s.tvos.deployment_target = "9.0"
   # s.watchos.deployment_target = "2.0"
-  # s.tvos.deployment_target = "9.0"
 end
