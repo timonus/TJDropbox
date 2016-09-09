@@ -7,6 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <CoreGraphics/CoreGraphics.h>
 
 // Dropbox v2 HTTP API reference: https://www.dropbox.com/developers/documentation/http/documentation
 
