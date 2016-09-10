@@ -1,6 +1,6 @@
 # TJDropbox
 
-TJDropbox is a Dropbox v2 client library written in Objective-C. When Dropbox originally announced their v2 API they included [only a Swift client library]((https://www.dropboxforum.com/hc/en-us/community/posts/204715229-To-use-API-v2-in-iOS-platform-we-need-an-objective-C-version)), and at the time I wrote TJDropbox as an Objective-C alternative to it to migrate my app [Close-up](https://itunes.apple.com/app/id515789135) to Dropbox v2. Since then, Dropbox has released an [Objective-C v2 SDK](https://github.com/dropbox/dropbox-sdk-obj-c). If you’re migrating away from Dropbox’s v1 SDK to v2 and are considering alternatives to Dropbox’s first party solution, TJDropbox is a pretty well featured solution with no dependencies and very few source files.
+TJDropbox is a Dropbox v2 client library written in Objective-C. When Dropbox originally announced their v2 API they included [only a Swift client library]((https://www.dropboxforum.com/hc/en-us/community/posts/204715229-To-use-API-v2-in-iOS-platform-we-need-an-objective-C-version)), and at the time I wrote TJDropbox as an Objective-C alternative to it to migrate my app [Close-up](https://itunes.apple.com/app/id515789135) to Dropbox v2. Since then, Dropbox has released an [Objective-C v2 SDK](https://github.com/dropbox/dropbox-sdk-obj-c). If you’re migrating away from Dropbox’s v1 SDK to v2 and are considering alternatives to Dropbox’s first party solution, TJDropbox is a pretty well featured replacement with no dependencies and very few source files.
 
 ## Installation
 
