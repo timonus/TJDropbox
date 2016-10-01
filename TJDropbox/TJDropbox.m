@@ -663,4 +663,17 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return isPathNotFoundError;
 }
 
+- (BOOL)tj_isInvalidAccessTokenError
+{
+    BOOL isInvalidAccessTokenError = NO;
+    if ([self.domain isEqualToString:TJDropboxErrorDomain]) {
+        NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
+        NSString *const tag = dropboxErrorDictionary[@".tag"];
+        if ([tag isEqualToString:@"invalid_access_token"]) {
+            isInvalidAccessTokenError = YES;
+        }
+    }
+    return isInvalidAccessTokenError;
+}
+
 @end

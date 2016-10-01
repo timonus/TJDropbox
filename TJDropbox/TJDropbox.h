@@ -90,6 +90,7 @@ typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
 @interface NSError (TJDropbox)
 
 @property (nonatomic, assign, readonly) BOOL tj_isPathNotFoundError;
+@property (nonatomic, assign, readonly) BOOL tj_isInvalidAccessTokenError;
 
 @end
 
