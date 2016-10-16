@@ -88,7 +88,7 @@ All the externally exposed methods in TJDropbox are built on top of these utilit
 
 ## Architecture notes
 
-- I wanted to give people who use this library control, which is why auth is largely up to you (though you can use `TJDropboxAuthenticationViewController`) and storing of tokens is up to you. I don't want to tell you how to manage that stuff, your app may have it's own special needs.
+- I wanted to give people who use this library control, which is why auth is largely up to you (though you can use `TJDropboxAuthenticationViewController`) and storing of tokens is up to you. I don't want to tell you how to manage that stuff, your app may have its own special needs.
 - At the moment, callbacks from TJDropbox methods will come back on threads other than the main thread. That means you'll need to dispatch back to the main thread sometimes, beware!
 - I believe in [using boring tech](http://mcfunley.com/choose-boring-technology). This is, after all, an Objective-C port of something that there's a Swift version of. There are no external dependencies or craziness, it's just built on top of foundation classes and has little magic to it. I'd prefer to keep it simple.
 - TJDropbox supports iOS 8 and above. It could be modified to support iOS 7 and above, for now the use of `NSURLQueryItem` is the only thing I think is blocking that.
