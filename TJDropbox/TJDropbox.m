@@ -109,7 +109,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth
     
-    NSURLComponents *const components = [NSURLComponents componentsWithURL:[NSURL URLWithString:@"https://www.dropbox.com/1/oauth2/authorize"] resolvingAgainstBaseURL:NO];
+    NSURLComponents *const components = [NSURLComponents componentsWithURL:[NSURL URLWithString:@"https://www.dropbox.com/oauth2/authorize"] resolvingAgainstBaseURL:NO];
     components.queryItems = @[
         [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
         [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
