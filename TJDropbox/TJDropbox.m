@@ -592,6 +592,56 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [self performAPIRequest:request withCompletion:completion];
 }
 
++ (NSURLRequest *)requestForThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken
+{
+    // https://www.dropbox.com/developers/documentation/http/documentation#files-get_thumbnail
+    NSString *thumbnailSizeValue = nil;
+    switch (thumbnailSize) {
+        case TJDropboxThumbnailSize32Square:
+            thumbnailSizeValue = @"w32h32";
+            break;
+        case TJDropboxThumbnailSize64Square:
+            thumbnailSizeValue = @"w64h64";
+            break;
+        case TJDropboxThumbnailSize128Square:
+            thumbnailSizeValue = @"w128h128";
+            break;
+        case TJDropboxThumbnailSize640x480:
+            thumbnailSizeValue = @"w640h480";
+            break;
+        case TJDropboxThumbnailSize1024x768:
+            thumbnailSizeValue = @"w1024h768";
+            break;
+    }
+    NSMutableDictionary *parameters = [NSMutableDictionary new];
+    parameters[@"path"] = [self asciiEncodeString:path];
+    if (thumbnailSizeValue) {
+        parameters[@"size"] = thumbnailSizeValue;
+    }
+    return [self contentRequestWithPath:@"/2/files/get_thumbnail" accessToken:accessToken parameters:parameters];
+}
+
++ (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
+{
+    NSURLRequest *const request = [self requestForThumbnailAtPath:remotePath size:thumbnailSize accessToken:accessToken];
+    
+    NSURLSessionDownloadTask *const task = [[self session] downloadTaskWithRequest:request];
+    [[[self taskDelegate] completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        NSDictionary *parsedResult = nil;
+        NSData *const resultData = [self resultDataForContentRequestResponse:response];
+        [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+
+        if (!error && location) {
+            // Move file into place
+            [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+        }
+        
+        completion(parsedResult, error);
+    } forKey:task];
+    [[self tasks] addObject:task];
+    [task resume];
+}
+
 #pragma mark - Sharing
 
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion

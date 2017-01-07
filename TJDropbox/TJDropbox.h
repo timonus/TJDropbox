@@ -27,6 +27,14 @@ typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
     TJDropboxSharedLinkTypeDirect // Changes result hosts to dl.dropboxusercontent.com
 };
 
+typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
+    TJDropboxThumbnailSize32Square,
+    TJDropboxThumbnailSize64Square,
+    TJDropboxThumbnailSize128Square,
+    TJDropboxThumbnailSize640x480,
+    TJDropboxThumbnailSize1024x768
+};
+
 @interface TJDropbox : NSObject
 
 // Authentication
@@ -71,6 +79,11 @@ typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
 
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion;
+
+// Previews
+
++ (NSURLRequest *)requestForThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken;
++ (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion;
 
 // Sharing
 
