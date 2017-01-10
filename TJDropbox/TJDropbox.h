@@ -82,7 +82,7 @@ typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 
 // Previews
 
-+ (NSURLRequest *)requestForThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken;
++ (NSURLRequest *)requestToDownloadThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken;
 + (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion;
 
 // Sharing

@@ -592,7 +592,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [self performAPIRequest:request withCompletion:completion];
 }
 
-+ (NSURLRequest *)requestForThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken
++ (NSURLRequest *)requestToDownloadThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#files-get_thumbnail
     NSString *thumbnailSizeValue = nil;
@@ -623,7 +623,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
 {
-    NSURLRequest *const request = [self requestForThumbnailAtPath:remotePath size:thumbnailSize accessToken:accessToken];
+    NSURLRequest *const request = [self requestToDownloadThumbnailAtPath:remotePath size:thumbnailSize accessToken:accessToken];
     
     NSURLSessionDownloadTask *const task = [[self session] downloadTaskWithRequest:request];
     [[[self taskDelegate] completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
