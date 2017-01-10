@@ -427,6 +427,13 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 #pragma mark - File Manipulation
 
++ (NSURLRequest *)requestToDownloadFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken
+{
+    return [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
+        @"path": [self asciiEncodeString:path]
+    }];
+}
+
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     [self downloadFileAtPath:remotePath toPath:localPath accessToken:accessToken progressBlock:nil completion:completion];
@@ -434,9 +441,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
-        @"path": [self asciiEncodeString:remotePath]
-    }];
+    NSURLRequest *const request = [self requestToDownloadFileAtPath:remotePath accessToken:accessToken];
     
     NSURLSessionDownloadTask *const task = [[self session] downloadTaskWithRequest:request];
     [[[self taskDelegate] completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
