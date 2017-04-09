@@ -168,21 +168,6 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return accessToken;
 }
 
-+ (void)migrateV1TokenToV2Token:(NSString *const)accessToken accessTokenSecret:(NSString *const)accessTokenSecret appKey:(NSString *const)appKey appSecret:(NSString *const)appSecret completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
-{
-    // https://www.dropbox.com/developers/reference/migration-guide#authentication
-    // https://www.dropbox.com/developers-v1/core/docs#oa2-from-oa1
-    // https://www.dropboxforum.com/hc/en-us/community/posts/204375656-Migrating-oauth1-to-oauth2-using-token-from-oauth1-
-    // https://blogs.dropbox.com/developers/2012/07/using-oauth-1-0-with-the-plaintext-signature-method/
-    
-    NSMutableURLRequest *const request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://api.dropbox.com/1/oauth2/token_from_oauth1"]];
-    request.HTTPMethod = @"POST";
-    [request setValue:[NSString stringWithFormat:@"OAuth oauth_version=\"1.0\", oauth_signature=\"PLAINTEXT\", oauth_consumer_key=\"%@\", oauth_token=\"%@\", oauth_signature=\"%@&%@\"", appKey, accessToken, appSecret, accessTokenSecret] forHTTPHeaderField:@"Authorization"];
-    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
-        completion(parsedResponse[@"access_token"], error);
-    }];
-}
-
 #pragma mark - Generic
 
 + (NSMutableURLRequest *)requestWithBaseURLString:(NSString *const)baseURLString path:(NSString *const)path accessToken:(NSString *const)accessToken
@@ -353,6 +338,33 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     
     return result;
 }
+
+#pragma mark - Token Migration
+
++ (void)migrateV1TokenToV2Token:(NSString *const)accessToken accessTokenSecret:(NSString *const)accessTokenSecret appKey:(NSString *const)appKey appSecret:(NSString *const)appSecret completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
+{
+    // https://github.com/dropbox/dropbox-sdk-obj-c/blob/3769fbacb0b458de7c20db08edba6ca21c54b650/Source/ObjectiveDropboxOfficial/Shared/Handwritten/OAuth/DBSDKKeychain.m#L363-L453
+    // https://www.dropbox.com/developers/documentation/http/documentation#auth-token-from_oauth1
+    
+    NSMutableURLRequest *const request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://api.dropbox.com/2/auth/token/from_oauth1"]];
+    request.HTTPMethod = @"POST";
+    request.HTTPBody = [[self parameterStringForParameters:@{@"oauth1_token": accessToken,
+                                                             @"oauth1_token_secret": accessTokenSecret}]
+                        dataUsingEncoding:NSUTF8StringEncoding];
+    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    
+    // use basic auth
+    NSString *authString = [[[NSString stringWithFormat:@"%@:%@", appKey, appSecret]
+                             dataUsingEncoding:NSUTF8StringEncoding]
+                            base64EncodedStringWithOptions:0];
+    
+    NSString *const authorization = [NSString stringWithFormat:@"Basic %@", authString];
+    [request addValue:authorization forHTTPHeaderField:@"Authorization"];
+    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
+        completion(parsedResponse[@"oauth2_token"], error);
+    }];
+}
+
 
 #pragma mark - Account Info
 
