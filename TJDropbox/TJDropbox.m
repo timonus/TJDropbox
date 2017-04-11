@@ -346,7 +346,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     // https://github.com/dropbox/dropbox-sdk-obj-c/blob/3769fbacb0b458de7c20db08edba6ca21c54b650/Source/ObjectiveDropboxOfficial/Shared/Handwritten/OAuth/DBSDKKeychain.m#L363-L453
     // https://www.dropbox.com/developers/documentation/http/documentation#auth-token-from_oauth1
     
-    NSMutableURLRequest *const request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://api.dropbox.com/2/auth/token/from_oauth1"]];
+    NSMutableURLRequest *const request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://api.dropboxapi.com/2/auth/token/from_oauth1"]];
     request.HTTPMethod = @"POST";
     request.HTTPBody = [[self parameterStringForParameters:@{@"oauth1_token": accessToken,
                                                              @"oauth1_token_secret": accessTokenSecret}]
