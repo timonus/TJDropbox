@@ -177,8 +177,11 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     
     NSMutableURLRequest *const request = [[NSMutableURLRequest alloc] initWithURL:components.URL];
     request.HTTPMethod = @"POST";
-    NSString *const authorization = [NSString stringWithFormat:@"Bearer %@", accessToken];
-    [request addValue:authorization forHTTPHeaderField:@"Authorization"];
+    
+    if (accessToken) {
+        NSString *const authorization = [NSString stringWithFormat:@"Bearer %@", accessToken];
+        [request addValue:authorization forHTTPHeaderField:@"Authorization"];
+    }
     
     return request;
 }
@@ -205,7 +208,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return parameterString;
 }
 
-+ (NSURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
++ (NSMutableURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
     request.HTTPBody = [[self parameterStringForParameters:parameters] dataUsingEncoding:NSUTF8StringEncoding];
@@ -346,12 +349,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     // https://github.com/dropbox/dropbox-sdk-obj-c/blob/3769fbacb0b458de7c20db08edba6ca21c54b650/Source/ObjectiveDropboxOfficial/Shared/Handwritten/OAuth/DBSDKKeychain.m#L363-L453
     // https://www.dropbox.com/developers/documentation/http/documentation#auth-token-from_oauth1
     
-    NSMutableURLRequest *const request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://api.dropboxapi.com/2/auth/token/from_oauth1"]];
-    request.HTTPMethod = @"POST";
-    request.HTTPBody = [[self parameterStringForParameters:@{@"oauth1_token": accessToken,
-                                                             @"oauth1_token_secret": accessTokenSecret}]
-                        dataUsingEncoding:NSUTF8StringEncoding];
-    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    NSMutableURLRequest *const request = [self apiRequestWithPath:@"/2/auth/token/from_oauth1"
+                                                      accessToken:nil
+                                                       parameters:@{@"oauth1_token": accessToken,
+                                                                    @"oauth1_token_secret": accessTokenSecret}];
     
     // use basic auth
     NSString *authString = [[[NSString stringWithFormat:@"%@:%@", appKey, appSecret]
@@ -360,6 +361,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     
     NSString *const authorization = [NSString stringWithFormat:@"Basic %@", authString];
     [request addValue:authorization forHTTPHeaderField:@"Authorization"];
+    
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         completion(parsedResponse[@"oauth2_token"], error);
     }];
