@@ -113,9 +113,18 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     components.queryItems = @[
         [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
         [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
-        [NSURLQueryItem queryItemWithName:@"response_type" value:@"token"]
+        [NSURLQueryItem queryItemWithName:@"response_type" value:@"token"],
+        [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
     ];
     return components.URL;
+}
+
++ (NSURL *) defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier {
+    return [NSURL URLWithString:[NSString stringWithFormat:@"db-%@://2/token", clientIdentifier]];
+}
+
++ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier {
+    return [self tokenAuthenticationURLWithClientIdentifier:clientIdentifier redirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
 + (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
@@ -133,6 +142,30 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         }
     }
     return accessToken;
+}
+
++ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier {
+    return [self accessTokenFromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
+}
+
++ (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL {
+    // when the user presses the cancel button on the website, this URL is returned:
+    // db-XXX://2/token#error_description=The+user+chose+not+to+give+your+app+access+to+their+Dropbox+account.&error=access_denied
+    if ([url.absoluteString hasPrefix:redirectURL.absoluteString]) {
+        NSString *const fragment = url.fragment;
+        NSURLComponents *const components = [NSURLComponents new];
+        components.query = fragment;
+        for (NSURLQueryItem *const item in components.queryItems) {
+            if ([item.name isEqualToString:@"error"]) {
+                return YES;
+            }
+        }
+    }
+    return NO;
+}
+
++ (BOOL)isAuthenticationErrorURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier {
+    return [self isAuthenticationErrorURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
 + (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
