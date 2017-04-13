@@ -620,10 +620,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     unsigned long long const offset = fileHandle.offsetInFile;
-    static const size_t kChunkSize = 5 * 1000 * 1000; // 5MB seems reasonable.
+    static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
     NSData *const chunk = [fileHandle readDataOfLength:kChunkSize];
-    const BOOL isLastChunk = chunk.length < kChunkSize;
-    unsigned long long chunkLength = [chunk length];
+    NSUInteger chunkLength = [chunk length];
+    const BOOL isLastChunk = chunkLength < kChunkSize;
     
     NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/append_v2" accessToken:accessToken parameters:@{
         @"cursor": @{
