@@ -588,7 +588,11 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion {
+    [self uploadLargeFileAtPath:localPath toPath:remotePath accessToken:accessToken progressBlock:nil completion:completion];
+}
+
++ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/start" accessToken:accessToken parameters:nil];
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
@@ -600,7 +604,11 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         NSString *const sessionIdentifier = parsedResult[@"session_id"];
         if (sessionIdentifier) {
             NSFileHandle *const fileHandle = [NSFileHandle fileHandleForReadingAtPath:localPath];
-            [self uploadChunkFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+            
+            unsigned long long fileSize = [fileHandle seekToEndOfFile];
+            [fileHandle seekToFileOffset:0];
+            
+            [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken progressBlock:progressBlock completion:completion];
         } else {
             completion(parsedResult, error);
         }
@@ -609,37 +617,52 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSNumber *const offset = @(fileHandle.offsetInFile);
+    unsigned long long const offset = fileHandle.offsetInFile;
     static const size_t kChunkSize = 5 * 1000 * 1000; // 5MB seems reasonable.
     NSData *const chunk = [fileHandle readDataOfLength:kChunkSize];
     const BOOL isLastChunk = chunk.length < kChunkSize;
+    unsigned long long chunkLength = [chunk length];
     
     NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/append_v2" accessToken:accessToken parameters:@{
         @"cursor": @{
             @"session_id": sessionIdentifier,
-            @"offset": offset
+            @"offset": @(offset)
         },
         @"close": @(isLastChunk)
     }];
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
     
-    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromData:chunk completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        NSDictionary *parsedResult = nil;
-        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
-        
-        if (error && [(NSHTTPURLResponse *)response statusCode] != 200) {
-            // Error encountered
-            completion(parsedResult, error);
-        } else if (isLastChunk) {
-            // Finish the upload
-            [self finishLargeUploadFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
-        } else {
-            // Upload next chunk
-            [self uploadChunkFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromData:chunk];
+    
+    TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
+    
+    [taskDelegate.serialOperationQueue addOperationWithBlock:^{
+        [[taskDelegate completionBlocksForDataTasks] setObject:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+            NSDictionary *parsedResult = nil;
+            [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+            
+            if (error && [(NSHTTPURLResponse *)response statusCode] != 200) {
+                // Error encountered
+                completion(parsedResult, error);
+            } else if (isLastChunk) {
+                // Finish the upload
+                [self finishLargeUploadFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+            } else {
+                // Upload next chunk
+                [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken progressBlock:progressBlock completion:completion];
+            }
+        } forKey:task];
+        if (progressBlock) {
+            [[taskDelegate progressBlocksForDataTasks] setObject:^(CGFloat progress) {
+                unsigned long long totalBytesRead = offset + chunkLength * progress;
+                CGFloat totalProgress = (CGFloat)totalBytesRead / fileSize;
+                progressBlock(totalProgress);
+            } forKey:task];
         }
     }];
+
     [self addTask:task];
     [task resume];
 }
