@@ -371,7 +371,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             if (response) {
                 [userInfo setObject:response forKey:TJDropboxErrorUserInfoKeyResponse];
             }
-            if (dropboxAPIErrorDictionary) {
+            if ([dropboxAPIErrorDictionary isKindOfClass:[NSDictionary class]]) {
                 [userInfo setObject:dropboxAPIErrorDictionary forKey:TJDropboxErrorUserInfoKeyDropboxError];
             }
             if (errorString) {
@@ -452,9 +452,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         [parameters setObject:cursor forKey:@"cursor"];
     } else {
         [parameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
-    }
-    if (includeDeleted) {
-        [parameters setObject:@YES forKey:@"include_deleted"];
+        if (includeDeleted) {
+            [parameters setObject:@YES forKey:@"include_deleted"];
+        }
     }
     return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
 }
@@ -475,11 +475,20 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
-            NSArray *const newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
-            const BOOL hasMore = [[parsedResponse objectForKey:@"has_more"] boolValue];
+            NSArray *newlyAccumulatedFiles;
+            
+            if ([files isKindOfClass:[NSArray class]]) {
+                newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
+            } else {
+                newlyAccumulatedFiles = nil;
+            }
+            
+            id hasMoreObject = [parsedResponse objectForKey:@"has_more"];
+            BOOL hasMore = [hasMoreObject respondsToSelector:@selector(boolValue)] ? [hasMoreObject boolValue] : NO;
             NSString *const cursor = [parsedResponse objectForKey:@"cursor"];
+            
             if (hasMore) {
-                if (cursor) {
+                if ([cursor isKindOfClass:[NSString class]]) {
                     // Fetch next page
                     [self listFolderWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
