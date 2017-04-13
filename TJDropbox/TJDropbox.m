@@ -574,7 +574,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:@{
-        @"path": [self asciiEncodeString:remotePath]
+        @"path": [self asciiEncodeString:remotePath],
+        @"mode": @{@".tag": @"overwrite"}
     }];
     
     NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath]];
@@ -686,7 +687,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             @"offset": offset
         },
         @"commit": @{
-            @"path": [self asciiEncodeString:remotePath]
+            @"path": [self asciiEncodeString:remotePath],
+            @"mode": @{@".tag": @"overwrite"}
         }
     }];
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
