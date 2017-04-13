@@ -534,8 +534,16 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
             
             if (!error && location) {
-                // Move file into place
-                [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+                NSFileManager *fileManager = [[NSFileManager alloc] init];
+                
+                // remove file if it exists
+                if ([fileManager fileExistsAtPath:localPath]) {
+                    [fileManager removeItemAtPath:localPath error:&error];
+                }
+                if (!error) {
+                    // Move file into place
+                    [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+                }
             }
             
             completion(parsedResult, error);
@@ -741,8 +749,16 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
             
             if (!error && location) {
-                // Move file into place
-                [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+                NSFileManager *fileManager = [[NSFileManager alloc] init];
+                
+                // remove file if it exists
+                if ([fileManager fileExistsAtPath:localPath]) {
+                    [fileManager removeItemAtPath:localPath error:&error];
+                }
+                if (!error) {
+                    // Move file into place
+                    [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+                }
             }
             
             completion(parsedResult, error);
