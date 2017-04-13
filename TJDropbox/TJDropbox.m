@@ -22,6 +22,12 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 @property (nonatomic, strong) NSMutableDictionary *progressBlocksForDownloadTasks;
 @property (nonatomic, strong) NSMutableDictionary *completionBlocksForDownloadTasks;
 
+// This serial queue must be used for the following:
+//   - as the NSURLSession delegateQueue
+//   - when accessing the task delegate's block and accumulatedData dictionaries
+// This ensures that these dictionaries are only accessed by one thread at once.
+@property (nonatomic, strong) NSOperationQueue *serialOperationQueue;
+
 @end
 
 @implementation TJDropboxURLSessionTaskDelegate
@@ -35,6 +41,12 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         
         self.progressBlocksForDownloadTasks = [NSMutableDictionary new];
         self.completionBlocksForDownloadTasks = [NSMutableDictionary new];
+        
+        NSOperationQueue *serialOperationQueue = [[NSOperationQueue alloc] init];
+        // make serial
+        serialOperationQueue.maxConcurrentOperationCount = 1;
+        serialOperationQueue.qualityOfService = NSQualityOfServiceUserInitiated;
+        self.serialOperationQueue = serialOperationQueue;
     }
     return self;
 }
@@ -276,12 +288,13 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:[self taskDelegate] delegateQueue:nil];
+        TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
+        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:taskDelegate delegateQueue:taskDelegate.serialOperationQueue];
     });
     return session;
 }
 
-+ (NSHashTable<NSURLSessionTask *> *)tasks
++ (NSHashTable<NSURLSessionTask *> *)_tasks
 {
     static NSHashTable<NSURLSessionTask *> *hashTable = nil;
     static dispatch_once_t onceToken;
@@ -291,6 +304,26 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return hashTable;
 }
 
+// This queue must be used when accessing the list of tasks (+[tasks] method).
+// This ensures that the hash tables is only accessed by one thread at once.
++ (NSOperationQueue *)tasksOperationQueue {
+    static NSOperationQueue *tasksOperationQueue = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        tasksOperationQueue = [[NSOperationQueue alloc] init];
+        // make serial
+        tasksOperationQueue.maxConcurrentOperationCount = 1;
+        tasksOperationQueue.qualityOfService = NSQualityOfServiceUserInitiated;
+    });
+    return tasksOperationQueue;
+}
+
++ (void) addTask:(NSURLSessionTask *) task {
+    [[self tasksOperationQueue] addOperationWithBlock:^{
+        [[self _tasks] addObject:task];
+    }];
+}
+
 + (void)performAPIRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLSessionTask *const task = [[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
@@ -298,7 +331,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
     }];
-    [[self tasks] addObject:task];
+    [self addTask:task];
     [task resume];
 }
 
@@ -491,22 +524,28 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     NSURLRequest *const request = [self requestToDownloadFileAtPath:remotePath accessToken:accessToken];
     
     NSURLSessionDownloadTask *const task = [[self session] downloadTaskWithRequest:request];
-    [[[self taskDelegate] completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        NSDictionary *parsedResult = nil;
-        NSData *const resultData = [self resultDataForContentRequestResponse:response];
-        [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
-        
-        if (!error && location) {
-            // Move file into place
-            [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+    
+    TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
+    
+    [taskDelegate.serialOperationQueue addOperationWithBlock:^{
+        [[taskDelegate completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+            NSDictionary *parsedResult = nil;
+            NSData *const resultData = [self resultDataForContentRequestResponse:response];
+            [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+            
+            if (!error && location) {
+                // Move file into place
+                [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+            }
+            
+            completion(parsedResult, error);
+        } forKey:task];
+        if (progressBlock) {
+            [[taskDelegate progressBlocksForDownloadTasks] setObject:progressBlock forKey:task];
         }
-        
-        completion(parsedResult, error);
-    } forKey:task];
-    if (progressBlock) {
-        [[[self taskDelegate] progressBlocksForDownloadTasks] setObject:progressBlock forKey:task];
-    }
-    [[self tasks] addObject:task];
+    }];
+    
+    [self addTask:task];
     [task resume];
 }
 
@@ -523,16 +562,21 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     
     NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath]];
     
-    [[[self taskDelegate] completionBlocksForDataTasks] setObject:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        NSDictionary *parsedResult = nil;
-        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
-        
-        completion(parsedResult, error);
-    } forKey:task];
-    if (progressBlock) {
-        [[[self taskDelegate] progressBlocksForDataTasks] setObject:progressBlock forKey:task];
-    }
-    [[self tasks] addObject:task];
+    TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
+    
+    [taskDelegate.serialOperationQueue addOperationWithBlock:^{
+        [[taskDelegate completionBlocksForDataTasks] setObject:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+            NSDictionary *parsedResult = nil;
+            [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+            
+            completion(parsedResult, error);
+        } forKey:task];
+        if (progressBlock) {
+            [[taskDelegate progressBlocksForDataTasks] setObject:progressBlock forKey:task];
+        }
+    }];
+    
+    [self addTask:task];
     [task resume];
 }
 
@@ -553,7 +597,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             completion(parsedResult, error);
         }
     }];
-    [[self tasks] addObject:task];
+    [self addTask:task];
     [task resume];
 }
 
@@ -588,7 +632,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             [self uploadChunkFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
         }
     }];
-    [[self tasks] addObject:task];
+    [self addTask:task];
     [task resume];
 }
 
@@ -612,7 +656,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
     }];
-    [[self tasks] addObject:task];
+    [self addTask:task];
     [task resume];
 }
 
@@ -687,19 +731,25 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     NSURLRequest *const request = [self requestToDownloadThumbnailAtPath:remotePath size:thumbnailSize accessToken:accessToken];
     
     NSURLSessionDownloadTask *const task = [[self session] downloadTaskWithRequest:request];
-    [[[self taskDelegate] completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-        NSDictionary *parsedResult = nil;
-        NSData *const resultData = [self resultDataForContentRequestResponse:response];
-        [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
-
-        if (!error && location) {
-            // Move file into place
-            [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
-        }
-        
-        completion(parsedResult, error);
-    } forKey:task];
-    [[self tasks] addObject:task];
+    
+    TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
+    
+    [taskDelegate.serialOperationQueue addOperationWithBlock:^{
+        [[taskDelegate completionBlocksForDownloadTasks] setObject:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+            NSDictionary *parsedResult = nil;
+            NSData *const resultData = [self resultDataForContentRequestResponse:response];
+            [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+            
+            if (!error && location) {
+                // Move file into place
+                [[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+            }
+            
+            completion(parsedResult, error);
+        } forKey:task];
+    }];
+    
+    [self addTask:task];
     [task resume];
 }
 
@@ -749,9 +799,11 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)cancelAllRequests
 {
-    for (NSURLSessionTask *const task in [self tasks]) {
-        [task cancel];
-    }
+    [[self tasksOperationQueue] addOperationWithBlock:^{
+        for (NSURLSessionTask *const task in [self _tasks]) {
+            [task cancel];
+        }
+    }];
 }
 
 @end
