@@ -71,6 +71,7 @@ Once authenticated, TJDropbox is capable of doing the following things
 - Getting info about files (thanks @horseshoe7)
 - Getting shareable links to files
 - Getting a user's total space and available space (thanks @onfoot)
+- Creating folders (thanks @blach)
 
 The methods for these are all listed in TJDropbox.h.
 
@@ -103,5 +104,6 @@ All the externally exposed methods in TJDropbox are built on top of these utilit
 ## Apps using TJDropbox
 
 - [Close-up](https://itunes.apple.com/app/id515789135)
+- [Textastic](https://www.textasticapp.com)
 - [Songbook Simple 2.0](http://itunes.apple.com/app/id728359573)
 - [Muse Monitor](https://itunes.apple.com/app/id988527143)
