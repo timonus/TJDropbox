@@ -22,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithCoder:(NSCoder *)aDecoder NS_UNAVAILABLE;
 - (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil NS_UNAVAILABLE;
 
-- (instancetype)initWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *const)redirectURL delegate:(id<TJDropboxAuthenticationViewControllerDelegate>)delegate NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithClientIdentifier:(NSString *const)clientIdentifier delegate:(id<TJDropboxAuthenticationViewControllerDelegate>)delegate NS_DESIGNATED_INITIALIZER;
 
 // Exposed publicly in case you want to provide 1Password auth or something similar.
 // Do not change this web view's delegate, it's required for auth to work.
