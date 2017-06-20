@@ -126,16 +126,18 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
         [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
         [NSURLQueryItem queryItemWithName:@"response_type" value:@"token"],
-        [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
+        [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"]
     ];
     return components.URL;
 }
 
-+ (NSURL *) defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier {
++ (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier
+{
     return [NSURL URLWithString:[NSString stringWithFormat:@"db-%@://2/token", clientIdentifier]];
 }
 
-+ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier {
++ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
+{
     return [self tokenAuthenticationURLWithClientIdentifier:clientIdentifier redirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
@@ -156,11 +158,13 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return accessToken;
 }
 
-+ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier {
++ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
+{
     return [self accessTokenFromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
-+ (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL {
++ (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
+{
     // when the user presses the cancel button on the website, this URL is returned:
     // db-XXX://2/token#error_description=The+user+chose+not+to+give+your+app+access+to+their+Dropbox+account.&error=access_denied
     if ([url.absoluteString hasPrefix:redirectURL.absoluteString]) {
@@ -176,7 +180,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return NO;
 }
 
-+ (BOOL)isAuthenticationErrorURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier {
++ (BOOL)isAuthenticationErrorURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
+{
     return [self isAuthenticationErrorURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
@@ -306,19 +311,20 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 // This queue must be used when accessing the list of tasks (+[tasks] method).
 // This ensures that the hash tables is only accessed by one thread at once.
-+ (NSOperationQueue *)tasksOperationQueue {
++ (NSOperationQueue *)tasksOperationQueue
+{
     static NSOperationQueue *tasksOperationQueue = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         tasksOperationQueue = [[NSOperationQueue alloc] init];
-        // make serial
         tasksOperationQueue.maxConcurrentOperationCount = 1;
         tasksOperationQueue.qualityOfService = NSQualityOfServiceUserInitiated;
     });
     return tasksOperationQueue;
 }
 
-+ (void) addTask:(NSURLSessionTask *) task {
++ (void)addTask:(NSURLSessionTask *)task
+{
     [[self tasksOperationQueue] addOperationWithBlock:^{
         [[self _tasks] addObject:task];
     }];
@@ -598,7 +604,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion {
++ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+{
     [self uploadLargeFileAtPath:localPath toPath:remotePath accessToken:accessToken progressBlock:nil completion:completion];
 }
 
@@ -629,7 +636,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    unsigned long long const offset = fileHandle.offsetInFile;
+    const unsigned long long offset = fileHandle.offsetInFile;
     static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
     NSData *const chunk = [fileHandle readDataOfLength:kChunkSize];
     NSUInteger chunkLength = [chunk length];
