@@ -574,15 +574,17 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    [self uploadFileAtPath:localPath toPath:remotePath accessToken:accessToken progressBlock:nil completion:completion];
+    [self uploadFileAtPath:localPath toPath:remotePath overwriteExisting:NO accessToken:accessToken progressBlock:nil completion:completion];
 }
 
-+ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting accessToken:(NSString *const)accessToken progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:@{
-        @"path": [self asciiEncodeString:remotePath],
-        @"mode": @{@".tag": @"overwrite"}
-    }];
+    NSMutableDictionary<NSString *, id> *const parameters = [NSMutableDictionary new];
+    parameters[@"path"] = [self asciiEncodeString:remotePath];
+    if (overwriteExisting) {
+        parameters[@"mode"] = @{@".tag": @"overwrite"};
+    }
+    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:parameters];
     
     NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath]];
     
@@ -606,10 +608,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    [self uploadLargeFileAtPath:localPath toPath:remotePath accessToken:accessToken progressBlock:nil completion:completion];
+    [self uploadLargeFileAtPath:localPath toPath:remotePath overwriteExisting:NO accessToken:accessToken progressBlock:nil completion:completion];
 }
 
-+ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting accessToken:(nonnull NSString *const)accessToken progressBlock:(void (^const _Nullable)(CGFloat))progressBlock completion:(nonnull void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
 {
     NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/start" accessToken:accessToken parameters:nil];
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
@@ -625,7 +627,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             unsigned long long fileSize = [fileHandle seekToEndOfFile];
             [fileHandle seekToFileOffset:0];
             
-            [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken progressBlock:progressBlock completion:completion];
+            [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath overwriteExisting:overwriteExisting accessToken:accessToken progressBlock:progressBlock completion:completion];
         } else {
             completion(parsedResult, error);
         }
@@ -634,7 +636,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting accessToken:(NSString *const)accessToken progressBlock:(void (^const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     const unsigned long long offset = fileHandle.offsetInFile;
     static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
@@ -665,10 +667,10 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                 completion(parsedResult, error);
             } else if (isLastChunk) {
                 // Finish the upload
-                [self finishLargeUploadFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken completion:completion];
+                [self finishLargeUploadFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath overwriteExisting:overwriteExisting accessToken:accessToken completion:completion];
             } else {
                 // Upload next chunk
-                [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath accessToken:accessToken progressBlock:progressBlock completion:completion];
+                [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath overwriteExisting:overwriteExisting accessToken:accessToken progressBlock:progressBlock completion:completion];
             }
         } forKey:task];
         if (progressBlock) {
@@ -684,19 +686,21 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
-+ (void)finishLargeUploadFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)finishLargeUploadFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSNumber *const offset = @(fileHandle.offsetInFile);
     
+    NSMutableDictionary *const commit = [NSMutableDictionary new];
+    commit[@"path"] = [self asciiEncodeString:remotePath];
+    if (overwriteExisting) {
+        commit[@"mode"] = @{@".tag": @"overwrite"};
+    }
     NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/finish" accessToken:accessToken parameters: @{
         @"cursor": @{
             @"session_id": sessionIdentifier,
             @"offset": offset
         },
-        @"commit": @{
-            @"path": [self asciiEncodeString:remotePath],
-            @"mode": @{@".tag": @"overwrite"}
-        }
+        @"commit": commit
     }];
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
     
