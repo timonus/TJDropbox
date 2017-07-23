@@ -37,20 +37,20 @@ Authentication with TJDropbox is pretty flexible. The simplest way to do it woul
 ```objc
 - (void)authenticate
 {
-	TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:/*identifier*/ delegate:self];
-	
-	// Present modally...
-	UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:authViewController];
-	// You should add a bar button item to the auth view controller to allow users to dismiss it
-	[self presentViewController:navigationController animated:YES completion:nil];
-	
-	// ...or push onto nav stack
-	[self.navigationController pushViewController:authViewController animated:YES];
+    TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:/*identifier*/ delegate:self];
+    
+    // Present modally...
+    UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:authViewController];
+    // You should add a bar button item to the auth view controller to allow users to dismiss it
+    [self presentViewController:navigationController animated:YES completion:nil];
+    
+    // ...or push onto nav stack
+    [self.navigationController pushViewController:authViewController animated:YES];
 }
 
 - (void)dropboxAuthenticationViewController:(TJDropboxAuthenticationViewController *)viewController didAuthenticateWithAccessToken:(NSString *)accessToken
 {
-	// Store token for use with TJDropbox!
+    // Store token for use with TJDropbox!
 }
 ```
 

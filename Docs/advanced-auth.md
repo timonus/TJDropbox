@@ -19,9 +19,9 @@ NSString *clientIdentifier = /* fill this in */;
 NSURL *authURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier];
 
 if ([[UIApplication sharedApplication] canOpenURL:authURL]) {
-	[[UIApplication sharedApplication] openURL:authURL];
+    [[UIApplication sharedApplication] openURL:authURL];
 } else {
-	// Use another authentication method...
+    // Use another authentication method...
 }
 ```
 
@@ -32,16 +32,16 @@ Once this is done, you need to intercept URLs coming from the Dropbox app back i
 ```objc
 - (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
 {
-	BOOL didHandle = NO;
-	NSString *accessToken = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url];
-	if (accessToken) {
-		// Success! You've authenticated. Store the token and use it.
-		didHandle = YES;
-	} else {
-		// Handle other incoming URLs if need be
-	}
-	
-	return didHandle;
+    BOOL didHandle = NO;
+    NSString *accessToken = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url];
+    if (accessToken) {
+        // Success! You've authenticated. Store the token and use it.
+        didHandle = YES;
+    } else {
+        // Handle other incoming URLs if need be
+    }
+    
+    return didHandle;
 }
 ```
 
@@ -79,16 +79,16 @@ Then you'll need to intercept URLs coming into your app from this `SFSafariViewC
 ```objc
 - (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
 {
-	BOOL didHandle = NO;
-	NSString *accessToken = [TJDropbox accessTokenFromURL:url withClientIdentifier:/*client identifier*/];
-	if (accessToken) {
-		// Success! You've authenticated. Store the token and use it.
-		didHandle = YES;
-	} else {
-		// Handle other incoming URLs if need be
-	}
-	
-	return didHandle;
+    BOOL didHandle = NO;
+    NSString *accessToken = [TJDropbox accessTokenFromURL:url withClientIdentifier:/*client identifier*/];
+    if (accessToken) {
+        // Success! You've authenticated. Store the token and use it.
+        didHandle = YES;
+    } else {
+        // Handle other incoming URLs if need be
+    }
+    
+    return didHandle;
 }
 ```
 
@@ -105,33 +105,33 @@ In the place where you initiate authentication.
 ```objc
 - (void)authenticate
 {
-	NSString *clientIdentifier = /* your client identifier */;
-	NSURL *appAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier];	
-	if ([[UIApplication sharedApplication] canOpenURL:appAuthURL]) {
-		[[UIApplication sharedApplication] openURL:appAuthURL];
-	} else if ([SFAuthenticationSession class]) {
-		[[[SFAuthenticationSession alloc] initWithURL:authURL callbackURLScheme:callbackScheme completionHandler:^(NSURL *callbackURL, NSError *error) {
-	    NSString *accessToken = [TJDropbox accessTokenFromURL:callbackURL withClientIdentifier:clientIdentifier];
-	    if (accessToken) {
-	        // Completed with token!
-	    } else {
-	        // Completed without token, something went wrong.
-	    }
-		}] start];
-	} else if ([SFSafariViewController class]) {
-		NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
-		SFSafariViewController *safariViewController = [[SFSafariViewController alloc] initWithURL:authURL];
-		// Present safariViewController modally
-	} else {
-		TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:clientIdentifier delegate:self];
-		// Push authViewController onto the nav stack or embed in a nav controller and present modally
-	}
+    NSString *clientIdentifier = /* your client identifier */;
+    NSURL *appAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier];   
+    if ([[UIApplication sharedApplication] canOpenURL:appAuthURL]) {
+        [[UIApplication sharedApplication] openURL:appAuthURL];
+    } else if ([SFAuthenticationSession class]) {
+        [[[SFAuthenticationSession alloc] initWithURL:authURL callbackURLScheme:callbackScheme completionHandler:^(NSURL *callbackURL, NSError *error) {
+        NSString *accessToken = [TJDropbox accessTokenFromURL:callbackURL withClientIdentifier:clientIdentifier];
+        if (accessToken) {
+            // Completed with token!
+        } else {
+            // Completed without token, something went wrong.
+        }
+        }] start];
+    } else if ([SFSafariViewController class]) {
+        NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
+        SFSafariViewController *safariViewController = [[SFSafariViewController alloc] initWithURL:authURL];
+        // Present safariViewController modally
+    } else {
+        TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:clientIdentifier delegate:self];
+        // Push authViewController onto the nav stack or embed in a nav controller and present modally
+    }
 }
 
 - (void)dropboxAuthenticationViewController:(TJDropboxAuthenticationViewController *)viewController didAuthenticateWithAccessToken:(NSString *)accessToken
 {
-	// Huzzah! You're authenticated.
-	// Store the token and dismiss your view controller
+    // Huzzah! You're authenticated.
+    // Store the token and dismiss your view controller
 }
 ```
 
@@ -140,20 +140,20 @@ In your app delegate
 ```
 - (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
 {
-	BOOL didHandle = NO;
-	NSString *dropboxAppAccessToken = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url];
-	NSString *dropboxWebAccessToken = [TJDropbox accessTokenFromURL:url withClientIdentifier:/*client identifier*/];
-	if (dropboxAppAccessToken) {
-		// Success! You've authenticated. Store the token and use it.
-		didHandle = YES;
-	} else if (dropboxWebAccessToken) {
-		// Success! You've authenticated. Store the token and use it.
-		// Also, dismiss your SFSafariViewController.
-		didHandle = YES;
-	} else {
-		// Handle other incoming URLs if need be
-	}
-	
-	return didHandle;
+    BOOL didHandle = NO;
+    NSString *dropboxAppAccessToken = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url];
+    NSString *dropboxWebAccessToken = [TJDropbox accessTokenFromURL:url withClientIdentifier:/*client identifier*/];
+    if (dropboxAppAccessToken) {
+        // Success! You've authenticated. Store the token and use it.
+        didHandle = YES;
+    } else if (dropboxWebAccessToken) {
+        // Success! You've authenticated. Store the token and use it.
+        // Also, dismiss your SFSafariViewController.
+        didHandle = YES;
+    } else {
+        // Handle other incoming URLs if need be
+    }
+    
+    return didHandle;
 }
 ```
