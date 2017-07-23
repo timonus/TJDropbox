@@ -14,7 +14,7 @@ TJDropbox provides two methods for authenticating users using the Dropbox app, i
 
 First, you'll need to get the URL you'll use to authenticate and check if the OS can open in. You'll need to add `dbapi-2` to your info plist's `LSApplicationQueriesSchemes` array in order for this to work in iOS 9 and aboe.
 
-```
+```objc
 NSString *clientIdentifier = /* fill this in */;
 NSURL *authURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier];
 
@@ -25,11 +25,11 @@ if ([[UIApplication sharedApplication] canOpenURL:authURL]) {
 }
 ```
 
-You'll then need to register your app with a URL scheme that the Dropbox app is capable of handling, outlined in the 'Set up a URL scheme' section [here](https://www.dropbox.com/developers/documentation/swift#tutorial).
+You'll then need to register your app with a URL scheme that the Dropbox app is capable of handling, outlined in the 'Set up a URL scheme' section [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project).
 
 Once this is done, you need to intercept URLs coming from the Dropbox app back into yours, like so.
 
-```
+```objc
 - (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
 {
 	BOOL didHandle = NO;
@@ -45,49 +45,42 @@ Once this is done, you need to intercept URLs coming from the Dropbox app back i
 }
 ```
 
-## Using SFSafariViewController
+## Using SFAuthenticationSession (iOS 11 and above)
 
-Using `SFSafariViewController` for Dropbox authentication is useful if the user is already signed in within their browser. It's a bit involved, here's how to do it.
+Using `SFAuthenticationSession` to authenticate users via TJDropbox is very easy. You should register a URL scheme for your app as described [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project) (also needed to authentication with the Dropbox app) then use the following snippet.
 
-First, you'll need to put up a static web page that redirects Dropbox's authentication redirects to your app's URL scheme and register the URL for that page as a redirect URI for your app. The contents of this page should look like this.
+```objc
+NSString *clientIdentifier = /* fill this in */;
+NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
+NSStringr *callbackScheme = [NSString stringWithFormat:@"db-%@", clientIdentifier];
 
+[[[SFAuthenticationSession alloc] initWithURL:authURL callbackURLScheme:callbackScheme completionHandler:^(NSURL *callbackURL, NSError *error) {
+    NSString *accessToken = [TJDropbox accessTokenFromURL:callbackURL withClientIdentifier:clientIdentifier];
+    if (accessToken) {
+        // Completed with token!
+    } else {
+        // Completed without token, something went wrong.
+    }
+}] start];
 ```
-<html>
-    <head>
-        <title>Redirecting</title>
-    </head>
-    <body>
-        <script>
-            var fragment = window.location.hash;
-            window.location = '**your-apps-url-scheme**://dropboxauth' + fragment;
-        </script>
-    </body>
-</html>
-```
 
-You should replace `your-apps-url-scheme` with the scheme you registered in the Dropbox app auth step.
+## Using SFSafariViewController (iOS 9 and above)
 
-Next, you'll need to create and present an `SFSafariViewController` with the auth URL provided by TJDropbox.
+Using `SFSafariViewController` for Dropbox authentication is useful if the user is already signed in within their browser. It is superseded by `SFAuthenticationSession` in iOS 11, but useful for prior iOS versions. You should register a URL scheme for your app as described [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project) (also needed to authentication with the Dropbox app) then use the following snippet.
 
-```
-NSURL *redirectURL = /* URL to static page from prior step */;
-if ([SFSafariViewController class]) {
-	NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier redirectURL:redirectURL];
-	SFSafariViewController *safariViewController = [[SFSafariViewController alloc] initWithURL:authURL];
-	// Present safariViewController modally
-} else {
-	// Use another authentication method...
-}
+```objc
+NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
+SFSafariViewController *safariViewController = [[SFSafariViewController alloc] initWithURL:authURL];
+// Present safariViewController modally
 ```
 
 Then you'll need to intercept URLs coming into your app from this `SFSafariViewController` redirecting to your app's URL scheme.
 
-```
+```objc
 - (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
 {
 	BOOL didHandle = NO;
-	NSURL *redirectURL = [NSURL URLWithString:@"**your-apps-url-scheme**://dropboxauth"];
-	NSString *accessToken = [TJDropbox accessTokenFromURL:url withRedirectURL:];
+	NSString *accessToken = [TJDropbox accessTokenFromURL:url withClientIdentifier:/*client identifier*/];
 	if (accessToken) {
 		// Success! You've authenticated. Store the token and use it.
 		didHandle = YES;
@@ -99,7 +92,7 @@ Then you'll need to intercept URLs coming into your app from this `SFSafariViewC
 }
 ```
 
-## Using TJDropboxAuthenticationViewController
+## Using TJDropboxAuthenticationViewController (iOS 8 and above)
 
 Using `TJDropboxAuthenticationViewController` is outlined [here](../README.md#auth).
 
@@ -109,20 +102,28 @@ Here's sample code for using all three of these methods.
 
 In the place where you initiate authentication.
 
-```
+```objc
 - (void)authenticate
 {
 	NSString *clientIdentifier = /* your client identifier */;
-	NSURL *redirectURL = /* your redirect URL */;
 	NSURL *appAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier];	
 	if ([[UIApplication sharedApplication] canOpenURL:appAuthURL]) {
 		[[UIApplication sharedApplication] openURL:appAuthURL];
+	} else if ([SFAuthenticationSession class]) {
+		[[[SFAuthenticationSession alloc] initWithURL:authURL callbackURLScheme:callbackScheme completionHandler:^(NSURL *callbackURL, NSError *error) {
+	    NSString *accessToken = [TJDropbox accessTokenFromURL:callbackURL withClientIdentifier:clientIdentifier];
+	    if (accessToken) {
+	        // Completed with token!
+	    } else {
+	        // Completed without token, something went wrong.
+	    }
+		}] start];
 	} else if ([SFSafariViewController class]) {
-		NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier redirectURL:redirectURL];
+		NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
 		SFSafariViewController *safariViewController = [[SFSafariViewController alloc] initWithURL:authURL];
 		// Present safariViewController modally
 	} else {
-		TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:clientIdentifier redirectURL:redirectURL delegate:self];
+		TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:clientIdentifier delegate:self];
 		// Push authViewController onto the nav stack or embed in a nav controller and present modally
 	}
 }
@@ -141,8 +142,7 @@ In your app delegate
 {
 	BOOL didHandle = NO;
 	NSString *dropboxAppAccessToken = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url];
-	NSURL *redirectURL = [NSURL URLWithString:@"**your-apps-url-scheme**://dropboxauth"];
-	NSString *dropboxWebAccessToken = [TJDropbox accessTokenFromURL:url withRedirectURL:redirectURL];
+	NSString *dropboxWebAccessToken = [TJDropbox accessTokenFromURL:url withClientIdentifier:/*client identifier*/];
 	if (dropboxAppAccessToken) {
 		// Success! You've authenticated. Store the token and use it.
 		didHandle = YES;
@@ -156,20 +156,4 @@ In your app delegate
 	
 	return didHandle;
 }
-```
-
-And a page you'll need hosted somewhere on the web.
-
-```
-<html>
-    <head>
-        <title>Redirecting</title>
-    </head>
-    <body>
-        <script>
-            var fragment = window.location.hash;
-            window.location = '**your-apps-url-scheme**://dropboxauth' + fragment;
-        </script>
-    </body>
-</html>
 ```
