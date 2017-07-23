@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "TJDropbox"
-  s.version      = "0.5"
+  s.version      = "0.6"
   s.summary      = "A Dropbox v2 client library written in Objective-C"
   s.description  = "Dropbox provides a v2 SDK for iOS, but it's only compatible with Swift."
 
