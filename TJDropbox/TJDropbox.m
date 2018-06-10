@@ -744,7 +744,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete" accessToken:accessToken parameters:@{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete_v2" accessToken:accessToken parameters:@{
         @"path": [self asciiEncodeString:path]
     }];
     [self performAPIRequest:request withCompletion:completion];
