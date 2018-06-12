@@ -734,7 +734,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move" accessToken:accessToken parameters:@{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move_v2" accessToken:accessToken parameters:@{
         @"from_path" : [self asciiEncodeString:fromPath],
         @"to_path" : [self asciiEncodeString:toPath]
     }];
