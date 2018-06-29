@@ -94,6 +94,10 @@ typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 + (NSURLRequest *)requestToDownloadThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken;
 + (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion;
 
+// Search
+
++ (void)searchForFilesAtPath:(NSString *const)path matchingQuery:(NSString *const)query accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray *_Nullable entries, NSError *_Nullable error))completion;
+
 // Sharing
 
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion;

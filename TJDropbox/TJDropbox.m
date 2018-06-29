@@ -814,6 +814,20 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     [task resume];
 }
 
+#pragma mark - Search
+
++ (void)searchForFilesAtPath:(NSString *const)path matchingQuery:(NSString *const)query accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray *_Nullable entries, NSError *_Nullable error))completion
+{
+    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/search" accessToken:accessToken parameters:@{
+        @"path": path,
+        @"query": [self asciiEncodeString:query],
+        @"mode": @"filename"
+    }];
+    [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+        completion(parsedResponse[@"matches"], error);
+    }];
+}
+
 #pragma mark - Sharing
 
 + (void)getSharedLinkForFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion
