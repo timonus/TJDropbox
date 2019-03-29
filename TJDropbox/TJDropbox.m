@@ -557,7 +557,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                 }
                 if (!error) {
                     // Move file into place
-                    [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+                    [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath isDirectory:NO] error:&error];
                 }
             }
             
@@ -589,7 +589,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     }
     NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:parameters];
     
-    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath]];
+    NSURLSessionTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
     
     TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
     
@@ -808,7 +808,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                 }
                 if (!error) {
                     // Move file into place
-                    [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath] error:&error];
+                    [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:localPath isDirectory:NO] error:&error];
                 }
             }
             
