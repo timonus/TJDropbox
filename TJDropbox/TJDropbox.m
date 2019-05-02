@@ -511,6 +511,24 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     }];
 }
 
++ (void)longPollFolderWithCursor:(NSString *const)cursor
+                         timeout:(NSNumber *const)timeout // Between 30 and 480. Specify nil for default.
+                      completion:(void (^const)(BOOL didChange, NSTimeInterval backoff))completion
+{
+    // https://www.dropbox.com/developers/documentation/http/documentation#files-list_folder-longpoll
+    NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://notify.dropboxapi.com"
+                                                                   path:@"/2/files/list_folder/longpoll"
+                                                            accessToken:nil];
+    request.HTTPBody = [[self parameterStringForParameters:@{@"cursor": [self asciiEncodeString:cursor]}] dataUsingEncoding:NSUTF8StringEncoding];
+    [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    // 90 seconds of "jitter" mentioned in the doc, add 120 for safety's sake.
+    request.timeoutInterval = (timeout ? timeout.doubleValue : 30) + 120.0;
+    
+    [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+        completion([parsedResponse[@"changes"] boolValue], [parsedResponse[@"backoff"] doubleValue]);
+    }];
+}
+
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:@{

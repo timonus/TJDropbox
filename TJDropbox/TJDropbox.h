@@ -71,6 +71,10 @@ typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 
 + (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion;
 
++ (void)longPollFolderWithCursor:(NSString *const)cursor
+                         timeout:(NSNumber *const)timeout // Between 30 and 480. Specify nil for default.
+                      completion:(void (^const)(BOOL didChange, NSTimeInterval backoff))completion;
+
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion;
 
 // File Manipulation
