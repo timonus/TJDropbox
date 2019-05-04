@@ -299,34 +299,26 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return session;
 }
 
-+ (NSHashTable<NSURLSessionTask *> *)_tasks
+// This queue must be used when accessing the list of tasks (+[tasks] method).
+// This ensures that the hash tables is only accessed by one thread at once.
++ (void)performBlockWithTasks:(void (^)(NSHashTable<NSURLSessionTask *> *tasks))block
 {
+    static dispatch_queue_t tasksQueue;
     static NSHashTable<NSURLSessionTask *> *hashTable = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
+        tasksQueue = dispatch_queue_create("TJDropbox Tasks Queue", DISPATCH_QUEUE_SERIAL);
         hashTable = [NSHashTable weakObjectsHashTable];
     });
-    return hashTable;
-}
-
-// This queue must be used when accessing the list of tasks (+[tasks] method).
-// This ensures that the hash tables is only accessed by one thread at once.
-+ (NSOperationQueue *)tasksOperationQueue
-{
-    static NSOperationQueue *tasksOperationQueue = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        tasksOperationQueue = [[NSOperationQueue alloc] init];
-        tasksOperationQueue.maxConcurrentOperationCount = 1;
-        tasksOperationQueue.qualityOfService = NSQualityOfServiceUserInitiated;
+    dispatch_async(tasksQueue, ^{
+        block(hashTable);
     });
-    return tasksOperationQueue;
 }
 
 + (void)addTask:(NSURLSessionTask *)task
 {
-    [[self tasksOperationQueue] addOperationWithBlock:^{
-        [[self _tasks] addObject:task];
+    [self performBlockWithTasks:^(NSHashTable<NSURLSessionTask *> *tasks) {
+        [tasks addObject:task];
     }];
 }
 
@@ -880,8 +872,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 + (void)cancelAllRequests
 {
-    [[self tasksOperationQueue] addOperationWithBlock:^{
-        for (NSURLSessionTask *const task in [self _tasks]) {
+    [self performBlockWithTasks:^(NSHashTable<NSURLSessionTask *> *tasks) {
+        for (NSURLSessionTask *const task in tasks) {
             [task cancel];
         }
     }];
