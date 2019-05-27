@@ -258,6 +258,19 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return accessToken;
 }
 
++ (void)revokeToken:(NSString *const)token withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion
+{
+    // https://www.dropbox.com/developers/documentation/http/documentation#auth-token-revoke
+    
+    NSMutableURLRequest *const request = [self apiRequestWithPath:@"/2/auth/token/revoke"
+                                                      accessToken:token
+                                                       parameters:nil];
+    
+    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
+        completion(error == nil, error);
+    }];
+}
+
 #pragma mark - Generic
 
 + (NSMutableURLRequest *)requestWithBaseURLString:(NSString *const)baseURLString path:(NSString *const)path accessToken:(NSString *const)accessToken
@@ -404,7 +417,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     NSDictionary *const dropboxAPIErrorDictionary = [*parsedResult objectForKey:@"error"];
     
     if (!*error) {
-        if (statusCode >= 400 || dropboxAPIErrorDictionary || !*parsedResult) {
+        if (statusCode >= 400 || dropboxAPIErrorDictionary || (!*parsedResult && statusCode != 200)) {
             NSMutableDictionary *const userInfo = [NSMutableDictionary new];
             if (response) {
                 [userInfo setObject:response forKey:TJDropboxErrorUserInfoKeyResponse];
