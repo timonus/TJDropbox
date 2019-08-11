@@ -289,7 +289,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return request;
 }
 
-+ (NSString *)parameterStringForParameters:(NSDictionary<NSString *, NSString *> *)parameters
++ (NSString *)parameterStringForParameters:(NSDictionary<NSString *, id> *)parameters
 {
     NSString *parameterString = nil;
     if (parameters.count > 0) {
@@ -311,7 +311,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return parameterString;
 }
 
-+ (NSMutableURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
++ (NSMutableURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
     request.HTTPBody = [[self parameterStringForParameters:parameters] dataUsingEncoding:NSUTF8StringEncoding];
@@ -323,7 +323,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return request;
 }
 
-+ (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, NSString *> *const)parameters
++ (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://content.dropboxapi.com" path:path accessToken:accessToken];
     NSString *const parameterString = [self parameterStringForParameters:parameters];
