@@ -347,7 +347,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         TJDropboxURLSessionTaskDelegate *taskDelegate = [self taskDelegate];
-        session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration ephemeralSessionConfiguration] delegate:taskDelegate delegateQueue:taskDelegate.serialOperationQueue];
+        NSURLSessionConfiguration *const configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+        configuration.shouldUseExtendedBackgroundIdleMode = YES; // Allows requests to run better when the app is backgrounded https://twitter.com/BigZaphod/status/1164977540479553543
+        session = [NSURLSession sessionWithConfiguration:configuration delegate:taskDelegate delegateQueue:taskDelegate.serialOperationQueue];
     });
     return session;
 }
