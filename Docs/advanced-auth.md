@@ -45,16 +45,17 @@ Once this is done, you need to intercept URLs coming from the Dropbox app back i
 }
 ```
 
-## Using SFAuthenticationSession (iOS 11 and above)
+## Using `ASWebAuthenticationSession`/`SFAuthenticationSession` (iOS 12/11 and above)
 
-Using `SFAuthenticationSession` to authenticate users via TJDropbox is very easy. You should register a URL scheme for your app as described [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project) (also needed to authentication with the Dropbox app) then use the following snippet.
+Using `ASWebAuthenticationSession` (iOS 12+) or `SFAuthenticationSession` (iOS 11+) to authenticate users via TJDropbox is very easy. You should register a URL scheme for your app as described [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project) (also needed to authentication with the Dropbox app) then use the following snippet.
 
 ```objc
 NSString *clientIdentifier = /* fill this in */;
 NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
 NSStringr *callbackScheme = [NSString stringWithFormat:@"db-%@", clientIdentifier];
 
-[[[SFAuthenticationSession alloc] initWithURL:authURL callbackURLScheme:callbackScheme completionHandler:^(NSURL *callbackURL, NSError *error) {
+// or SFAuthenticationSession
+[[[ASWebAuthenticationSession alloc] initWithURL:authURL callbackURLScheme:callbackScheme completionHandler:^(NSURL *callbackURL, NSError *error) {
     NSString *accessToken = [TJDropbox accessTokenFromURL:callbackURL withClientIdentifier:clientIdentifier];
     if (accessToken) {
         // Completed with token!
@@ -64,9 +65,9 @@ NSStringr *callbackScheme = [NSString stringWithFormat:@"db-%@", clientIdentifie
 }] start];
 ```
 
-## Using SFSafariViewController (iOS 9 and above)
+## Using `SFSafariViewController` (iOS 9 and above)
 
-Using `SFSafariViewController` for Dropbox authentication is useful if the user is already signed in within their browser. It is superseded by `SFAuthenticationSession` in iOS 11, but useful for prior iOS versions. You should register a URL scheme for your app as described [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project) (also needed to authentication with the Dropbox app) then use the following snippet.
+Using `SFSafariViewController` for Dropbox authentication is useful if the user is already signed in within their browser. It is superseded by `ASWebAuthenticationSession`/`SFAuthenticationSession` in later iOS versions, but useful for older OSes. You should register a URL scheme for your app as described [here](https://github.com/dropbox/SwiftyDropbox#configure-your-project) (also needed to authentication with the Dropbox app) then use the following snippet.
 
 ```objc
 NSURL *authURL = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier];
@@ -92,7 +93,9 @@ Then you'll need to intercept URLs coming into your app from this `SFSafariViewC
 }
 ```
 
-## Using TJDropboxAuthenticationViewController (iOS 8 and above)
+You can also used similar steps to perform auth with Safari.app by calling `-openURL:` with `authURL`.
+
+## Using `TJDropboxAuthenticationViewController` (iOS 8 and above)
 
 Using `TJDropboxAuthenticationViewController` is outlined [here](../README.md#auth).
 
