@@ -3,10 +3,12 @@
 TJDropbox is designed to be pretty flexible when it comes to authentication. Once can simply use `TJDropboxAuthenticationViewController` as a catch-all, but I'd suggest doing the following for the best user experience.
 
 1. Try to authenticate using the Dropbox app
-2. Use `SFSafariViewController` if it's available
-3. Use `TJDropboxAuthenticationViewController` as a last resort.
+2. Use `ASWebAuthenticationSession` if available (iOS 12+)
+3. Use `SFAuthenticationSession` if available (iOS 11+)
+3. Use `SFSafariViewController` if available (iOS 9+)
+4. Use the Safari app or `TJDropboxAuthenticationViewController`
 
-The reasoning for this suggestion is that users are likely already authenticated in the Dropbox app or in `SFSafariViewController`, so they don't need to re-enter their credentials. Here's a breakdown of how to implement this.
+The reasoning for this suggestion is that users are likely already authenticated in the Dropbox app or in Safari, so they don't need to re-enter their credentials. Here's a breakdown of how to implement these.
 
 ## Using the Dropbox App
 
