@@ -142,7 +142,7 @@ In the place where you initiate authentication.
 
 In your app delegate
 
-```
+```objc
 - (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
 {
     BOOL didHandle = NO;
