@@ -9,7 +9,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface TJDropboxAuthenticator : NSObject
+API_AVAILABLE(ios(10.0)) @interface TJDropboxAuthenticator : NSObject
 
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
