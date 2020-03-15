@@ -57,6 +57,7 @@ typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 /// Used to extract the access token from Dropbox app authentication
 + (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url;
 
+/// Revokes an access token.
 + (void)revokeToken:(NSString *const)token withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion;
 
 /// Used to migrate a v1 access token to a v2 access token
