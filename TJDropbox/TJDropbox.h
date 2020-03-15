@@ -43,6 +43,9 @@ typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *const)redirectURL;
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier;
 
+/// Provides "default" app URL scheme that auth redirects back to (used by @c +tokenAuthenticationURLWithClientIdentifier: and @c +accessTokenFromURL:withClientIdentifier: internally).
++ (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier;
+
 /// Used to extract the access token returned from Dropbox OAuth
 + (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
 + (nullable NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
