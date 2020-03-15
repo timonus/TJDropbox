@@ -48,8 +48,8 @@ static void (^_tj_completion)(NSString *accessToken);
 {
     
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
-    if (![[[[NSBundle mainBundle] infoDictionary] objectForKey:@"LSApplicationQueriesSchemes"] containsObject:redirectURLScheme]) {
-        NSAssert(NO, @"You must add \"%@\" to your info.plist's value for \"LSApplicationQueriesSchemes\"", redirectURLScheme);
+    if (![[[[NSBundle mainBundle] infoDictionary] valueForKeyPath:@"CFBundleURLTypes.CFBundleURLSchemes.@unionOfArrays.self"] containsObject:redirectURLScheme]) { // https://forums.developer.apple.com/thread/31307
+        NSAssert(NO, @"You must add the \"%@\" scheme to your info.plist's \"CFBundleURLTypes\"", redirectURLScheme);
         completion(nil);
         return;
     }
