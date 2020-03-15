@@ -97,11 +97,14 @@ static void (^_tj_completion)(NSString *accessToken);
             [(ASWebAuthenticationSession *)session setPresentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)self];
         }
         [(ASWebAuthenticationSession *)session start];
+#if defined(__IPHONE_12_0) && __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_12_0
     } else if (@available(iOS 11.0, *)) {
         session = [[SFAuthenticationSession alloc] initWithURL:url
                                              callbackURLScheme:redirectURLScheme
                                              completionHandler:completionHandler];
         [(SFAuthenticationSession *)session start];
+#pragma clang diagnostic pop
+#endif
     } else {
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
             if (success) {
