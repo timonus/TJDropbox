@@ -6,55 +6,33 @@ TJDropbox is a Dropbox v2 client library written in Objective-C. When Dropbox or
 
 You can use TJDropbox by adding all the source files from the TJDropbox/ directory to your project, or with [CocoaPods](https://cocoapods.org).
 
-## Migrating Dropbox SDK v1 Tokens
-
-If you're updating from the v1 Dropbox SDK to TJDropbox, the `+migrateV1TokenToV2Token:accessTokenSecret:appKey:appSecret:completion:` method can be used to migrate your access token.
-
-```objc
-- (void)migrate
-{
-    NSString *userId = [[[DBSession sharedSession] userIds] firstObject];;
-    MPOAuthCredentialConcreteStore *store = [[DBSession sharedSession] credentialStoreForUserId:userId];
-    NSString *v1AccessToken = store.accessToken;
-    NSString *v1AccessTokenSecret = store.accessTokenSecret;
-    
-    if (v1AccessToken && v1AccessTokenSecret) {
-        [TJDropbox migrateV1TokenToV2Token:v1AccessToken accessTokenSecret:v1AccessTokenSecret appKey:/*app key*/ appSecret:/*app secret*/ completion:^(NSString *token, NSError *error) {
-            if (token) {
-                // Store token for use with TJDropbox!
-            }
-        }];
-    }
-}
-```
-
-TJDropbox doesn't store any credentials and is largely stateless, so storing the resulting token is up to you. I'd recommend using the keychain or `NSUserDefaults`.
-
 ## <a name="auth">Authenticating</a>
 
-Authentication with TJDropbox is pretty flexible. The simplest way to do it would be to show an instance of the provided `TJDropboxAuthenticationViewController` class.
+Authentication with TJDropbox is pretty flexible. The simplest way to do it would be to use the provided `TJDropboxAuthenticator` class.
 
 ```objc
 - (void)authenticate
 {
-    TJDropboxAuthenticationViewController *authViewController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:/*identifier*/ delegate:self];
-    
-    // Present modally...
-    UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:authViewController];
-    // You should add a bar button item to the auth view controller to allow users to dismiss it
-    [self presentViewController:navigationController animated:YES completion:nil];
-    
-    // ...or push onto nav stack
-    [self.navigationController pushViewController:authViewController animated:YES];
-}
-
-- (void)dropboxAuthenticationViewController:(TJDropboxAuthenticationViewController *)viewController didAuthenticateWithAccessToken:(NSString *)accessToken
-{
-    // Store token for use with TJDropbox!
+    [TJDropboxAuthenticator authenticateWithClientIdentifier:/*Dropbox client identifier*/
+                                         bypassingNativeAuth:NO
+                                                  completion:^(NSString *accessToken) {
+        if (accessToken) {
+            // Auth succeeded, store token.
+        } else {
+            // Auth did not succeed.
+        }
+    }];
 }
 ```
 
-However, you can also authenticate using the Dropbox app, `SFAuthenticationSession`, `SFSafariViewController`, or write your own auth using the utility methods TJDropbox provides. Advanced auth is detailed [here](Docs/advanced-auth.md).
+Be sure to call `+tryHandleAuthenticationCallbackWithURL:` from your app delegate's `-application:openURL:options:` method for this to work. `TJDropboxAuthenticator` attempts auth using the following methods in order of preference.
+
+1. The Dropbox app (bypassed if `bypassingNativeAuth` is `NO`)
+2. `ASWebAuthenticationSession` in iOS 12+.
+3. `SFAuthenticationSession` in iOS 11+.
+4. Auth in Safari.app
+
+That being said, you can also authenticate manually using the utility methods TJDropbox provides. Advanced auth is detailed [here](Docs/advanced-auth.md).
 
 Just as with migrating a v1 token to v2, TJDropbox doesn't store the credentials, that's up to you.
 
