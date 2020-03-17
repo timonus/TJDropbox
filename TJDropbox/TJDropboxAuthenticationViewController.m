@@ -9,6 +9,9 @@
 #import "TJDropboxAuthenticationViewController.h"
 #import "TJDropbox.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-implementations"
+
 @interface TJDropboxAuthenticationViewController () <UIWebViewDelegate>
 
 @property (nonatomic, copy) NSString *clientIdentifier;
@@ -62,3 +65,5 @@
 }
 
 @end
+
+#pragma clang diagnostic pop

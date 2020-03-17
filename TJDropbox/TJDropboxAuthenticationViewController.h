@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol TJDropboxAuthenticationViewControllerDelegate;
 
-@interface TJDropboxAuthenticationViewController : UIViewController
+API_DEPRECATED("Deprecated due to UIWebViewDeprecation. Use TJDropboxAuthenticator instead.", ios(2.0, 12.0)) @interface TJDropboxAuthenticationViewController : UIViewController
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder NS_UNAVAILABLE;
 - (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil NS_UNAVAILABLE;
@@ -30,7 +30,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@protocol TJDropboxAuthenticationViewControllerDelegate <NSObject>
+API_DEPRECATED("Deprecated due to UIWebViewDeprecation. Use TJDropboxAuthenticator instead.", ios(2.0, 12.0)) @protocol TJDropboxAuthenticationViewControllerDelegate <NSObject>
 
 - (void)dropboxAuthenticationViewController:(TJDropboxAuthenticationViewController *)viewController didAuthenticateWithAccessToken:(NSString *const)accessToken;
 
