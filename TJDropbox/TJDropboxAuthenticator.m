@@ -130,7 +130,7 @@ static void (^_tj_completion)(NSString *accessToken);
 {
     BOOL handledURL = NO;
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
-    if (url && [url.absoluteString hasPrefix:redirectURLScheme]) {
+    if (url && redirectURLScheme && [url.absoluteString hasPrefix:redirectURLScheme]) {
         NSString *const token = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url] ?: [TJDropbox accessTokenFromURL:url withClientIdentifier:clientIdentifier];
         
         completion(token);
