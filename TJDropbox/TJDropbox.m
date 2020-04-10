@@ -877,23 +877,29 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)getSharedLinkForFileAtPath:(NSString *const)path linkType:(const TJDropboxSharedLinkType)linkType uploadOrSaveInProgress:(const BOOL)uploadOrSaveInProgress accessToken:(NSString *const)accessToken completion:(void (^const)(NSString *_Nullable urlString))completion
 {
     // NOTE: create_shared_link has been deprecated, will likely be removed by Dropbox at some point. https://goo.gl/ZSrxRN
-    NSString *const requestPath = linkType == TJDropboxSharedLinkTypeShort ? @"/2/sharing/create_shared_link" : @"/2/sharing/create_shared_link_with_settings";
+    NSString *const requestPath = linkType == TJDropboxSharedLinkTypeShort || uploadOrSaveInProgress ? @"/2/sharing/create_shared_link" : @"/2/sharing/create_shared_link_with_settings";
     NSMutableDictionary *parameters = [NSMutableDictionary new];
     [parameters setObject:[self asciiEncodeString:path] forKey:@"path"];
     if (linkType == TJDropboxSharedLinkTypeShort) {
         [parameters setObject:@YES forKey:@"short_url"];
-        if (uploadOrSaveInProgress) {
+    }
+    if (uploadOrSaveInProgress) {
+        if (linkType == TJDropboxSharedLinkTypeDirect) {
+            NSLog(@"[TJDropbox] - Warning in %s: uploadOrSaveInProgress is not compatible with TJDropboxSharedLinkTypeDirect. Parameter is being ignored.", __PRETTY_FUNCTION__);
+        } else {
             [parameters setObject:@"file" forKey:@"pending_upload"];
         }
-    } else if (uploadOrSaveInProgress) {
-        NSLog(@"[TJDropbox] - Warning in %s: uploadOrSaveInProgress is only compatible with short URL generation. Parameter is being ignored.", __PRETTY_FUNCTION__);
     }
     NSURLRequest *const request = [self apiRequestWithPath:requestPath accessToken:accessToken parameters:parameters];
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         NSString *urlString = parsedResponse[@"url"];
-        if (linkType == TJDropboxSharedLinkTypeDirect && urlString.length > 0) {
+        if (urlString.length > 0) {
             NSURLComponents *const components = [NSURLComponents componentsWithString:urlString];
-            components.host = @"dl.dropboxusercontent.com";
+            if (linkType == TJDropboxSharedLinkTypeDirect) {
+                components.host = @"dl.dropboxusercontent.com";
+            } else if (linkType == TJDropboxSharedLinkTypeDefault) {
+                components.path = components.path.stringByDeletingLastPathComponent;
+            }
             components.queryItems = nil; // the ?dl=0 that Dropbox appends doesn't seem strictly necessary.
             urlString = components.URL.absoluteString;
         }
