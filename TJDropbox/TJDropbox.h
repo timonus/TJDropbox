@@ -21,13 +21,13 @@ extern NSString *const TJDropboxErrorUserInfoKeyResponse; // For errors with TJD
 extern NSString *const TJDropboxErrorUserInfoKeyDropboxError; // For error with TJDropboxErrorDomain, userInfo may contain a Dropbox API error response dictionary under this field.
 extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with TJDropboxErrorDomain, userInfo may contain a string under this field.
 
-typedef NS_ENUM(NSUInteger, TJDropboxSharedLinkType) {
+typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxSharedLinkType) {
     TJDropboxSharedLinkTypeDefault,
     TJDropboxSharedLinkTypeShort, // Uses deprecated endpoint to generate db.tt links
     TJDropboxSharedLinkTypeDirect // Changes result hosts to dl.dropboxusercontent.com
 };
 
-typedef NS_ENUM(NSUInteger, TJDropboxThumbnailSize) {
+typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
     TJDropboxThumbnailSize32Square,
     TJDropboxThumbnailSize64Square,
     TJDropboxThumbnailSize128Square,
