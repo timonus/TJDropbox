@@ -893,6 +893,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     NSURLRequest *const request = [self apiRequestWithPath:requestPath accessToken:accessToken parameters:parameters];
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         NSString *urlString = parsedResponse[@"url"];
+        if (urlString.length == 0) {
+            urlString = parsedResponse[@"error"][@"shared_link_already_exists"][@"metadata"][@"url"];
+        }
         if (urlString.length > 0) {
             NSURLComponents *const components = [NSURLComponents componentsWithString:urlString];
             if (linkType == TJDropboxSharedLinkTypeDirect) {
