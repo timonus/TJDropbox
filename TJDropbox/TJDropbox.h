@@ -121,8 +121,8 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 
 @interface NSError (TJDropbox)
 
-@property (nonatomic, assign, readonly) BOOL tj_isPathNotFoundError;
-@property (nonatomic, assign, readonly) BOOL tj_isInvalidAccessTokenError;
+@property (nonatomic, readonly) BOOL tj_isPathNotFoundError;
+@property (nonatomic, readonly) BOOL tj_isInvalidAccessTokenError;
 
 @end
 

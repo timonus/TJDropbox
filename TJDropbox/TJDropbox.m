@@ -20,15 +20,15 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
  * They should be accessed via -setProgressBlock:completionBlock:for*Task: ONLY to ensure safety is maintained.
  */
 
-@property (nonatomic, strong) NSMutableDictionary *progressBlocksForTasks;
-@property (nonatomic, strong) NSMutableDictionary<NSURLSessionTask *, NSMutableData *> *accumulatedDataForDataTasks;
-@property (nonatomic, strong) NSMutableDictionary *completionBlocksForTasks;
+@property (nonatomic) NSMutableDictionary *progressBlocksForTasks;
+@property (nonatomic) NSMutableDictionary<NSURLSessionTask *, NSMutableData *> *accumulatedDataForDataTasks;
+@property (nonatomic) NSMutableDictionary *completionBlocksForTasks;
 
 // This serial queue must be used for the following:
 //   - as the NSURLSession delegateQueue
 //   - when accessing the task delegate's block and accumulatedData dictionaries
 // This ensures that these dictionaries are only accessed by one thread at once.
-@property (nonatomic, strong) NSOperationQueue *serialOperationQueue;
+@property (nonatomic) NSOperationQueue *serialOperationQueue;
 
 @end
 
