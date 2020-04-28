@@ -902,6 +902,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                 components.host = @"dl.dropboxusercontent.com";
             } else if (linkType == TJDropboxSharedLinkTypeDefault) {
                 components.path = components.path.stringByDeletingLastPathComponent;
+                components.host = [components.host stringByReplacingOccurrencesOfString:@"www." withString:@""];
             }
             components.queryItems = nil; // the ?dl=0 that Dropbox appends doesn't seem strictly necessary.
             urlString = components.URL.absoluteString;
