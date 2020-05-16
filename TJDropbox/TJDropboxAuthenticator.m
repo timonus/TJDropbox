@@ -99,6 +99,8 @@ static void (^_tj_completion)(NSString *accessToken);
         [(ASWebAuthenticationSession *)session start];
 #if defined(__IPHONE_12_0) && __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_12_0
     } else if (@available(iOS 11.0, *)) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         session = [[SFAuthenticationSession alloc] initWithURL:url
                                              callbackURLScheme:redirectURLScheme
                                              completionHandler:completionHandler];
