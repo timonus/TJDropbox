@@ -41,7 +41,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         self.progressBlocksForTasks = [NSMutableDictionary new];
         self.completionBlocksForTasks = [NSMutableDictionary new];
         
-        NSOperationQueue *serialOperationQueue = [[NSOperationQueue alloc] init];
+        NSOperationQueue *serialOperationQueue = [NSOperationQueue new];
         // make serial
         serialOperationQueue.maxConcurrentOperationCount = 1;
         serialOperationQueue.qualityOfService = NSQualityOfServiceUserInitiated;
@@ -336,7 +336,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     static TJDropboxURLSessionTaskDelegate *taskDelegate = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        taskDelegate = [[TJDropboxURLSessionTaskDelegate alloc] init];
+        taskDelegate = [TJDropboxURLSessionTaskDelegate new];
     });
     return taskDelegate;
 }
@@ -594,7 +594,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                               [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
                               
                               if (!error && location) {
-                                  NSFileManager *fileManager = [[NSFileManager alloc] init];
+                                  NSFileManager *fileManager = [NSFileManager new];
                                   
                                   // remove file if it exists
                                   if ([fileManager fileExistsAtPath:localPath]) {
@@ -833,7 +833,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                               [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
                               
                               if (!error && location) {
-                                  NSFileManager *fileManager = [[NSFileManager alloc] init];
+                                  NSFileManager *fileManager = [NSFileManager new];
                                   
                                   // remove file if it exists
                                   if ([fileManager fileExistsAtPath:localPath]) {
