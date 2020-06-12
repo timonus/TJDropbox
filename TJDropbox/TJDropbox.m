@@ -153,6 +153,30 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @end
 
+static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
+{
+    // Inspired by: https://github.com/dropbox/SwiftyDropbox/blob/6747041b04e337efe0de8f3be14acaf3b6d6d19b/Source/Client.swift#L90-L104
+    // Useful: http://stackoverflow.com/a/1775880
+    // Useful: https://www.objc.io/issues/9-strings/unicode/
+    
+    NSMutableString *const result = string ? [NSMutableString new] : nil;
+    
+    [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
+        const unichar character = [substring characterAtIndex:0];
+        NSString *stringToAppend = nil;
+        if (character > 127) {
+            stringToAppend = [NSString stringWithFormat:@"\\u%04x", character];
+        } else {
+            stringToAppend = substring;
+        }
+        if (stringToAppend) {
+            [result appendString:stringToAppend];
+        }
+    }];
+    
+    return result;
+}
+
 @implementation TJDropbox
 
 #pragma mark - Authentication
@@ -437,30 +461,6 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return *error == nil;
 }
 
-+ (NSString *)asciiEncodeString:(NSString *const)string
-{
-    // Inspired by: https://github.com/dropbox/SwiftyDropbox/blob/6747041b04e337efe0de8f3be14acaf3b6d6d19b/Source/Client.swift#L90-L104
-    // Useful: http://stackoverflow.com/a/1775880
-    // Useful: https://www.objc.io/issues/9-strings/unicode/
-    
-    NSMutableString *const result = string ? [NSMutableString new] : nil;
-    
-    [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
-        const unichar character = [substring characterAtIndex:0];
-        NSString *stringToAppend = nil;
-        if (character > 127) {
-            stringToAppend = [NSString stringWithFormat:@"\\u%04x", character];
-        } else {
-            stringToAppend = substring;
-        }
-        if (stringToAppend) {
-            [result appendString:stringToAppend];
-        }
-    }];
-    
-    return result;
-}
-
 #pragma mark - Token Migration
 
 + (void)migrateV1TokenToV2Token:(NSString *const)accessToken accessTokenSecret:(NSString *const)accessTokenSecret appKey:(NSString *const)appKey appSecret:(NSString *const)appSecret completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
@@ -504,7 +504,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     if (cursor.length > 0) {
         [parameters setObject:cursor forKey:@"cursor"];
     } else {
-        [parameters setObject:[self asciiEncodeString:filePath] forKey:@"path"];
+        [parameters setObject:_TJDropboxASCIIEncodeString(filePath) forKey:@"path"];
         if (includeDeleted) {
             [parameters setObject:@YES forKey:@"include_deleted"];
         }
@@ -561,7 +561,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:@{
-        @"path" : [self asciiEncodeString:remotePath]
+        @"path" : _TJDropboxASCIIEncodeString(remotePath)
     }];
     
     [self performAPIRequest:request withCompletion:completion];
@@ -572,7 +572,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (NSURLRequest *)requestToDownloadFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken
 {
     return [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
-        @"path": [self asciiEncodeString:path]
+        @"path": _TJDropboxASCIIEncodeString(path)
     }];
 }
 
@@ -622,7 +622,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(NSString *const)accessToken progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSMutableDictionary<NSString *, id> *const parameters = [NSMutableDictionary new];
-    parameters[@"path"] = [self asciiEncodeString:remotePath];
+    parameters[@"path"] = _TJDropboxASCIIEncodeString(remotePath);
     if (overwriteExisting) {
         parameters[@"mode"] = @{@".tag": @"overwrite"};
     }
@@ -729,7 +729,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     NSNumber *const offset = @(fileHandle.offsetInFile);
     
     NSMutableDictionary *const commit = [NSMutableDictionary new];
-    commit[@"path"] = [self asciiEncodeString:remotePath];
+    commit[@"path"] = _TJDropboxASCIIEncodeString(remotePath);
     if (overwriteExisting) {
         commit[@"mode"] = @{@".tag": @"overwrite"};
     }
@@ -758,7 +758,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/create_folder"
                                                accessToken:accessToken
-                                                parameters:@{@"path": [self asciiEncodeString:path]}];
+                                                parameters:@{@"path": _TJDropboxASCIIEncodeString(path)}];
     
     [self performAPIRequest:request withCompletion:completion];
 }
@@ -776,8 +776,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move_v2" accessToken:accessToken parameters:@{
-        @"from_path" : [self asciiEncodeString:fromPath],
-        @"to_path" : [self asciiEncodeString:toPath]
+        @"from_path" : _TJDropboxASCIIEncodeString(fromPath),
+        @"to_path" : _TJDropboxASCIIEncodeString(toPath)
     }];
     
     [self performAPIRequest:request withCompletion:completion];
@@ -786,7 +786,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete_v2" accessToken:accessToken parameters:@{
-        @"path": [self asciiEncodeString:path]
+        @"path": _TJDropboxASCIIEncodeString(path)
     }];
     [self performAPIRequest:request withCompletion:completion];
 }
@@ -813,7 +813,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
             break;
     }
     NSMutableDictionary *parameters = [NSMutableDictionary new];
-    parameters[@"path"] = [self asciiEncodeString:path];
+    parameters[@"path"] = _TJDropboxASCIIEncodeString(path);
     if (thumbnailSizeValue) {
         parameters[@"size"] = thumbnailSizeValue;
     }
@@ -859,7 +859,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/search" accessToken:accessToken parameters:@{
         @"path": path,
-        @"query": [self asciiEncodeString:query],
+        @"query": _TJDropboxASCIIEncodeString(query),
         @"mode": @"filename"
     }];
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
@@ -879,7 +879,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     // NOTE: create_shared_link has been deprecated, will likely be removed by Dropbox at some point. https://goo.gl/ZSrxRN
     NSString *const requestPath = linkType == TJDropboxSharedLinkTypeShort || uploadOrSaveInProgress ? @"/2/sharing/create_shared_link" : @"/2/sharing/create_shared_link_with_settings";
     NSMutableDictionary *parameters = [NSMutableDictionary new];
-    [parameters setObject:[self asciiEncodeString:path] forKey:@"path"];
+    [parameters setObject:_TJDropboxASCIIEncodeString(path) forKey:@"path"];
     if (linkType == TJDropboxSharedLinkTypeShort) {
         [parameters setObject:@YES forKey:@"short_url"];
     }
