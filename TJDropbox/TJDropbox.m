@@ -594,7 +594,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                               [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
                               
                               if (!error && location) {
-                                  NSFileManager *fileManager = [NSFileManager new];
+                                  NSFileManager *fileManager = [NSFileManager defaultManager];
                                   
                                   // remove file if it exists
                                   if ([fileManager fileExistsAtPath:localPath]) {
@@ -833,7 +833,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                               [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
                               
                               if (!error && location) {
-                                  NSFileManager *fileManager = [NSFileManager new];
+                                  NSFileManager *fileManager = [NSFileManager defaultManager];
                                   
                                   // remove file if it exists
                                   if ([fileManager fileExistsAtPath:localPath]) {
