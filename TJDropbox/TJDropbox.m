@@ -153,7 +153,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @end
 
-static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
+static NSString *_asciiEncodeString(NSString *const string)
 {
     // Inspired by: https://github.com/dropbox/SwiftyDropbox/blob/6747041b04e337efe0de8f3be14acaf3b6d6d19b/Source/Client.swift#L90-L104
     // Useful: http://stackoverflow.com/a/1775880
@@ -175,6 +175,28 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
     }];
     
     return result;
+}
+
+static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *parameters)
+{
+    NSString *parameterString = nil;
+    if (parameters.count > 0) {
+        NSError *error = nil;
+        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
+        if (error) {
+            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
+        } else {
+            parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
+            
+            // Ugh http://stackoverflow.com/a/24807307
+            // Asian characters are formatted as ASCII using +asciiEncodeString:, which adds a leading '\'.
+            // NSJSONSerialization likes to turn '\' into '\\', which Dropbox doesn't tolerate.
+            // This is a gross way of fixing it, but it works.
+            // Sucks because we have to round trip from dictionary -> data -> string -> data in a lot of cases.
+            parameterString = [parameterString stringByReplacingOccurrencesOfString:@"\\\\" withString:@"\\"];
+        }
+    }
+    return parameterString;
 }
 
 @implementation TJDropbox
@@ -313,32 +335,10 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
     return request;
 }
 
-+ (NSString *)parameterStringForParameters:(NSDictionary<NSString *, id> *)parameters
-{
-    NSString *parameterString = nil;
-    if (parameters.count > 0) {
-        NSError *error = nil;
-        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
-        if (error) {
-            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
-        } else {
-            parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
-            
-            // Ugh http://stackoverflow.com/a/24807307
-            // Asian characters are formatted as ASCII using +asciiEncodeString:, which adds a leading '\'.
-            // NSJSONSerialization likes to turn '\' into '\\', which Dropbox doesn't tolerate.
-            // This is a gross way of fixing it, but it works.
-            // Sucks because we have to round trip from dictionary -> data -> string -> data in a lot of cases.
-            parameterString = [parameterString stringByReplacingOccurrencesOfString:@"\\\\" withString:@"\\"];
-        }
-    }
-    return parameterString;
-}
-
 + (NSMutableURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
-    request.HTTPBody = [[self parameterStringForParameters:parameters] dataUsingEncoding:NSUTF8StringEncoding];
+    request.HTTPBody = [_parameterStringForParameters(parameters) dataUsingEncoding:NSUTF8StringEncoding];
     
     if (request.HTTPBody != nil) {
         [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
@@ -350,7 +350,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 + (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
 {
     NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://content.dropboxapi.com" path:path accessToken:accessToken];
-    NSString *const parameterString = [self parameterStringForParameters:parameters];
+    NSString *const parameterString = _parameterStringForParameters(parameters);
     [request setValue:parameterString forHTTPHeaderField:@"Dropbox-API-Arg"];
     return request;
 }
@@ -504,7 +504,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
     if (cursor.length > 0) {
         [parameters setObject:cursor forKey:@"cursor"];
     } else {
-        [parameters setObject:_TJDropboxASCIIEncodeString(filePath) forKey:@"path"];
+        [parameters setObject:_asciiEncodeString(filePath) forKey:@"path"];
         if (includeDeleted) {
             [parameters setObject:@YES forKey:@"include_deleted"];
         }
@@ -561,7 +561,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:@{
-        @"path" : _TJDropboxASCIIEncodeString(remotePath)
+        @"path" : _asciiEncodeString(remotePath)
     }];
     
     [self performAPIRequest:request withCompletion:completion];
@@ -572,7 +572,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 + (NSURLRequest *)requestToDownloadFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken
 {
     return [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
-        @"path": _TJDropboxASCIIEncodeString(path)
+        @"path": _asciiEncodeString(path)
     }];
 }
 
@@ -622,7 +622,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(NSString *const)accessToken progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSMutableDictionary<NSString *, id> *const parameters = [NSMutableDictionary new];
-    parameters[@"path"] = _TJDropboxASCIIEncodeString(remotePath);
+    parameters[@"path"] = _asciiEncodeString(remotePath);
     if (overwriteExisting) {
         parameters[@"mode"] = @{@".tag": @"overwrite"};
     }
@@ -729,7 +729,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
     NSNumber *const offset = @(fileHandle.offsetInFile);
     
     NSMutableDictionary *const commit = [NSMutableDictionary new];
-    commit[@"path"] = _TJDropboxASCIIEncodeString(remotePath);
+    commit[@"path"] = _asciiEncodeString(remotePath);
     if (overwriteExisting) {
         commit[@"mode"] = @{@".tag": @"overwrite"};
     }
@@ -758,7 +758,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/create_folder"
                                                accessToken:accessToken
-                                                parameters:@{@"path": _TJDropboxASCIIEncodeString(path)}];
+                                                parameters:@{@"path": _asciiEncodeString(path)}];
     
     [self performAPIRequest:request withCompletion:completion];
 }
@@ -776,8 +776,8 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move_v2" accessToken:accessToken parameters:@{
-        @"from_path" : _TJDropboxASCIIEncodeString(fromPath),
-        @"to_path" : _TJDropboxASCIIEncodeString(toPath)
+        @"from_path" : _asciiEncodeString(fromPath),
+        @"to_path" : _asciiEncodeString(toPath)
     }];
     
     [self performAPIRequest:request withCompletion:completion];
@@ -786,7 +786,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete_v2" accessToken:accessToken parameters:@{
-        @"path": _TJDropboxASCIIEncodeString(path)
+        @"path": _asciiEncodeString(path)
     }];
     [self performAPIRequest:request withCompletion:completion];
 }
@@ -813,7 +813,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
             break;
     }
     NSMutableDictionary *parameters = [NSMutableDictionary new];
-    parameters[@"path"] = _TJDropboxASCIIEncodeString(path);
+    parameters[@"path"] = _asciiEncodeString(path);
     if (thumbnailSizeValue) {
         parameters[@"size"] = thumbnailSizeValue;
     }
@@ -859,7 +859,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
 {
     NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/search" accessToken:accessToken parameters:@{
         @"path": path,
-        @"query": _TJDropboxASCIIEncodeString(query),
+        @"query": _asciiEncodeString(query),
         @"mode": @"filename"
     }];
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
@@ -879,7 +879,7 @@ static NSString *_TJDropboxASCIIEncodeString(NSString *const string)
     // NOTE: create_shared_link has been deprecated, will likely be removed by Dropbox at some point. https://goo.gl/ZSrxRN
     NSString *const requestPath = linkType == TJDropboxSharedLinkTypeShort || uploadOrSaveInProgress ? @"/2/sharing/create_shared_link" : @"/2/sharing/create_shared_link_with_settings";
     NSMutableDictionary *parameters = [NSMutableDictionary new];
-    [parameters setObject:_TJDropboxASCIIEncodeString(path) forKey:@"path"];
+    [parameters setObject:_asciiEncodeString(path) forKey:@"path"];
     if (linkType == TJDropboxSharedLinkTypeShort) {
         [parameters setObject:@YES forKey:@"short_url"];
     }
