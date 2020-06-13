@@ -153,52 +153,6 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @end
 
-static NSString *_asciiEncodeString(NSString *const string)
-{
-    // Inspired by: https://github.com/dropbox/SwiftyDropbox/blob/6747041b04e337efe0de8f3be14acaf3b6d6d19b/Source/Client.swift#L90-L104
-    // Useful: http://stackoverflow.com/a/1775880
-    // Useful: https://www.objc.io/issues/9-strings/unicode/
-    
-    NSMutableString *const result = string ? [NSMutableString new] : nil;
-    
-    [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
-        const unichar character = [substring characterAtIndex:0];
-        NSString *stringToAppend = nil;
-        if (character > 127) {
-            stringToAppend = [NSString stringWithFormat:@"\\u%04x", character];
-        } else {
-            stringToAppend = substring;
-        }
-        if (stringToAppend) {
-            [result appendString:stringToAppend];
-        }
-    }];
-    
-    return result;
-}
-
-static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *parameters)
-{
-    NSString *parameterString = nil;
-    if (parameters.count > 0) {
-        NSError *error = nil;
-        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
-        if (error) {
-            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
-        } else {
-            parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
-            
-            // Ugh http://stackoverflow.com/a/24807307
-            // Asian characters are formatted as ASCII using +asciiEncodeString:, which adds a leading '\'.
-            // NSJSONSerialization likes to turn '\' into '\\', which Dropbox doesn't tolerate.
-            // This is a gross way of fixing it, but it works.
-            // Sucks because we have to round trip from dictionary -> data -> string -> data in a lot of cases.
-            parameterString = [parameterString stringByReplacingOccurrencesOfString:@"\\\\" withString:@"\\"];
-        }
-    }
-    return parameterString;
-}
-
 @implementation TJDropbox
 
 #pragma mark - Authentication
@@ -316,6 +270,52 @@ static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *pa
 }
 
 #pragma mark - Generic
+
+static NSString *_asciiEncodeString(NSString *const string)
+{
+    // Inspired by: https://github.com/dropbox/SwiftyDropbox/blob/6747041b04e337efe0de8f3be14acaf3b6d6d19b/Source/Client.swift#L90-L104
+    // Useful: http://stackoverflow.com/a/1775880
+    // Useful: https://www.objc.io/issues/9-strings/unicode/
+    
+    NSMutableString *const result = string ? [NSMutableString new] : nil;
+    
+    [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
+        const unichar character = [substring characterAtIndex:0];
+        NSString *stringToAppend = nil;
+        if (character > 127) {
+            stringToAppend = [NSString stringWithFormat:@"\\u%04x", character];
+        } else {
+            stringToAppend = substring;
+        }
+        if (stringToAppend) {
+            [result appendString:stringToAppend];
+        }
+    }];
+    
+    return result;
+}
+
+static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *parameters)
+{
+    NSString *parameterString = nil;
+    if (parameters.count > 0) {
+        NSError *error = nil;
+        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
+        if (error) {
+            NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
+        } else {
+            parameterString = [[NSString alloc] initWithData:parameterData encoding:NSUTF8StringEncoding];
+            
+            // Ugh http://stackoverflow.com/a/24807307
+            // Asian characters are formatted as ASCII using +asciiEncodeString:, which adds a leading '\'.
+            // NSJSONSerialization likes to turn '\' into '\\', which Dropbox doesn't tolerate.
+            // This is a gross way of fixing it, but it works.
+            // Sucks because we have to round trip from dictionary -> data -> string -> data in a lot of cases.
+            parameterString = [parameterString stringByReplacingOccurrencesOfString:@"\\\\" withString:@"\\"];
+        }
+    }
+    return parameterString;
+}
 
 static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString *const path, NSString *const accessToken)
 {
