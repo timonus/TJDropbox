@@ -392,11 +392,12 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
     });
 }
 
-+ (void)addTask:(NSURLSessionTask *)task
+static void _addTask(NSURLSessionTask *const task)
 {
     _performBlockWithTasks(^(NSHashTable<NSURLSessionTask *> *tasks) {
         [tasks addObject:task];
     });
+    [task resume];
 }
 
 + (void)performAPIRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -406,8 +407,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
     }];
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 + (NSData *)resultDataForContentRequestResponse:(NSURLResponse *const)response
@@ -610,8 +610,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
                           }
                           forDownloadTask:task];
     
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -642,8 +641,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
                           }
                               forDataTask:task];
     
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 + (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -672,8 +670,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
             completion(parsedResult, error);
         }
     }];
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 + (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(NSString *const)accessToken progressBlock:(void (^)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -721,8 +718,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
                           }
                               forDataTask:task];
     
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 + (void)finishLargeUploadFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -752,8 +748,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
         [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
     }];
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 + (void)createFolderAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -855,8 +850,7 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
                           }
                           forDownloadTask:task];
     
-    [self addTask:task];
-    [task resume];
+    _addTask(task);
 }
 
 #pragma mark - Search
