@@ -319,7 +319,7 @@ static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *pa
 
 #pragma mark - Generic
 
-+ (NSMutableURLRequest *)requestWithBaseURLString:(NSString *const)baseURLString path:(NSString *const)path accessToken:(NSString *const)accessToken
+static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString *const path, NSString *const accessToken)
 {
     NSURLComponents *const components = [[NSURLComponents alloc] initWithString:baseURLString];
     components.path = path;
@@ -337,7 +337,7 @@ static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *pa
 
 + (NSMutableURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
 {
-    NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://api.dropboxapi.com" path:path accessToken:accessToken];
+    NSMutableURLRequest *const request = _baseRequest(@"https://api.dropboxapi.com", path, accessToken);
     request.HTTPBody = [_parameterStringForParameters(parameters) dataUsingEncoding:NSUTF8StringEncoding];
     
     if (request.HTTPBody != nil) {
@@ -349,7 +349,7 @@ static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *pa
 
 + (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
 {
-    NSMutableURLRequest *const request = [self requestWithBaseURLString:@"https://content.dropboxapi.com" path:path accessToken:accessToken];
+    NSMutableURLRequest *const request = _baseRequest(@"https://content.dropboxapi.com", path, accessToken);
     NSString *const parameterString = _parameterStringForParameters(parameters);
     [request setValue:parameterString forHTTPHeaderField:@"Dropbox-API-Arg"];
     return request;
