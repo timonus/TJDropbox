@@ -308,9 +308,7 @@ static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *pa
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth-token-revoke
     
-    NSMutableURLRequest *const request = [self apiRequestWithPath:@"/2/auth/token/revoke"
-                                                      accessToken:token
-                                                       parameters:nil];
+    NSMutableURLRequest *const request = _apiRequest(@"/2/auth/token/revoke", token, nil);
     
     [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
         completion(error == nil, error);
@@ -335,7 +333,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     return request;
 }
 
-+ (NSMutableURLRequest *)apiRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
+static NSMutableURLRequest *_apiRequest(NSString *const path, NSString *const accessToken, NSDictionary<NSString *, id> *const parameters)
 {
     NSMutableURLRequest *const request = _baseRequest(@"https://api.dropboxapi.com", path, accessToken);
     request.HTTPBody = [_parameterStringForParameters(parameters) dataUsingEncoding:NSUTF8StringEncoding];
@@ -347,7 +345,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     return request;
 }
 
-+ (NSMutableURLRequest *)contentRequestWithPath:(NSString *const)path accessToken:(NSString *const)accessToken parameters:(NSDictionary<NSString *, id> *const)parameters
+static NSMutableURLRequest *_contentRequest(NSString *const path, NSString *const accessToken, NSDictionary<NSString *, id> *const parameters)
 {
     NSMutableURLRequest *const request = _baseRequest(@"https://content.dropboxapi.com", path, accessToken);
     NSString *const parameterString = _parameterStringForParameters(parameters);
@@ -468,10 +466,11 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     // https://github.com/dropbox/dropbox-sdk-obj-c/blob/3769fbacb0b458de7c20db08edba6ca21c54b650/Source/ObjectiveDropboxOfficial/Shared/Handwritten/OAuth/DBSDKKeychain.m#L363-L453
     // https://www.dropbox.com/developers/documentation/http/documentation#auth-token-from_oauth1
     
-    NSMutableURLRequest *const request = [self apiRequestWithPath:@"/2/auth/token/from_oauth1"
-                                                      accessToken:nil
-                                                       parameters:@{@"oauth1_token": accessToken,
-                                                                    @"oauth1_token_secret": accessTokenSecret}];
+    NSMutableURLRequest *const request = _apiRequest(@"/2/auth/token/from_oauth1", nil,
+                                                     @{
+                                                         @"oauth1_token": accessToken,
+                                                         @"oauth1_token_secret": accessTokenSecret
+                                                     });
     
     // use basic auth
     NSString *authString = [[[NSString stringWithFormat:@"%@:%@", appKey, appSecret]
@@ -491,7 +490,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (void)getAccountInformationWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/users/get_current_account" accessToken:accessToken parameters:nil];
+    NSURLRequest *const request = _apiRequest(@"/2/users/get_current_account", accessToken, nil);
     [self performAPIRequest:request withCompletion:completion];
 }
 
@@ -509,7 +508,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
             [parameters setObject:@YES forKey:@"include_deleted"];
         }
     }
-    return [self apiRequestWithPath:urlPath accessToken:accessToken parameters:parameters];
+    return _apiRequest(urlPath, accessToken, parameters);
 }
 
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
@@ -560,9 +559,10 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/get_metadata" accessToken:accessToken parameters:@{
-        @"path" : _asciiEncodeString(remotePath)
-    }];
+    NSURLRequest *const request = _apiRequest(@"/2/files/get_metadata", accessToken,
+                                              @{
+                                                  @"path" : _asciiEncodeString(remotePath)
+                                              });
     
     [self performAPIRequest:request withCompletion:completion];
 }
@@ -571,9 +571,9 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (NSURLRequest *)requestToDownloadFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken
 {
-    return [self contentRequestWithPath:@"/2/files/download" accessToken:accessToken parameters:@{
+    return _contentRequest(@"/2/files/download", accessToken, @{
         @"path": _asciiEncodeString(path)
-    }];
+    });
 }
 
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -629,7 +629,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     if (muteDesktopNotifications) {
         parameters[@"mute"] = @YES;
     }
-    NSURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload" accessToken:accessToken parameters:parameters];
+    NSURLRequest *const request = _contentRequest(@"/2/files/upload", accessToken, parameters);
     
     NSURLSessionUploadTask *const task = [[self session] uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
     
@@ -653,7 +653,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(nonnull NSString *const)accessToken progressBlock:(void (^const _Nullable)(CGFloat))progressBlock completion:(nonnull void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
 {
-    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/start" accessToken:accessToken parameters:nil];
+    NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload_session/start", accessToken, nil);
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
     
     NSURLSessionTask *const task = [[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
@@ -684,13 +684,14 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     NSUInteger chunkLength = [chunk length];
     const BOOL isLastChunk = chunkLength < kChunkSize;
     
-    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/append_v2" accessToken:accessToken parameters:@{
-        @"cursor": @{
-            @"session_id": sessionIdentifier,
-            @"offset": @(offset)
-        },
-        @"close": @(isLastChunk)
-    }];
+    NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload_session/append_v2", accessToken,
+                                                         @{
+                                                             @"cursor": @{
+                                                                     @"session_id": sessionIdentifier,
+                                                                     @"offset": @(offset)
+                                                             },
+                                                             @"close": @(isLastChunk)
+                                                         });
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
     
     NSURLSessionUploadTask *const task = [[self session] uploadTaskWithRequest:request fromData:chunk];
@@ -736,13 +737,14 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     if (muteDesktopNotifications) {
         commit[@"mute"] = @YES;
     }
-    NSMutableURLRequest *const request = [self contentRequestWithPath:@"/2/files/upload_session/finish" accessToken:accessToken parameters: @{
-        @"cursor": @{
-            @"session_id": sessionIdentifier,
-            @"offset": offset
-        },
-        @"commit": commit
-    }];
+    NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload_session/finish", accessToken,
+                                                         @{
+                                                             @"cursor": @{
+                                                                     @"session_id": sessionIdentifier,
+                                                                     @"offset": offset
+                                                             },
+                                                             @"commit": commit
+                                                         });
     [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
     
     NSURLSessionTask *const task = [[self session] dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
@@ -756,38 +758,42 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (void)createFolderAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/create_folder"
-                                               accessToken:accessToken
-                                                parameters:@{@"path": _asciiEncodeString(path)}];
+    NSURLRequest *const request = _apiRequest(@"/2/files/create_folder", accessToken,
+                                              @{
+                                                  @"path": _asciiEncodeString(path)
+                                              });
     
     [self performAPIRequest:request withCompletion:completion];
 }
 
 + (void)saveContentsOfURL:(NSURL *const)url toPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/save_url" accessToken:accessToken parameters:@{
-        @"url": url.absoluteString,
-        @"path": path
-    }];
+    NSURLRequest *const request = _apiRequest(@"/2/files/save_url", accessToken,
+                                              @{
+                                                  @"url": url.absoluteString,
+                                                  @"path": path
+                                              });
     
     [self performAPIRequest:request withCompletion:completion];
 }
 
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/move_v2" accessToken:accessToken parameters:@{
-        @"from_path" : _asciiEncodeString(fromPath),
-        @"to_path" : _asciiEncodeString(toPath)
-    }];
+    NSURLRequest *const request = _apiRequest(@"/2/files/move_v2", accessToken,
+                                              @{
+                                                  @"from_path" : _asciiEncodeString(fromPath),
+                                                  @"to_path" : _asciiEncodeString(toPath)
+                                              });
     
     [self performAPIRequest:request withCompletion:completion];
 }
 
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/delete_v2" accessToken:accessToken parameters:@{
-        @"path": _asciiEncodeString(path)
-    }];
+    NSURLRequest *const request = _apiRequest(@"/2/files/delete_v2", accessToken,
+                                              @{
+                                                  @"path": _asciiEncodeString(path)
+                                              });
     [self performAPIRequest:request withCompletion:completion];
 }
 
@@ -817,7 +823,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     if (thumbnailSizeValue) {
         parameters[@"size"] = thumbnailSizeValue;
     }
-    return [self contentRequestWithPath:@"/2/files/get_thumbnail" accessToken:accessToken parameters:parameters];
+    return _contentRequest(@"/2/files/get_thumbnail", accessToken, parameters);
 }
 
 + (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
@@ -857,11 +863,12 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (void)searchForFilesAtPath:(NSString *const)path matchingQuery:(NSString *const)query accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray *_Nullable entries, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/files/search" accessToken:accessToken parameters:@{
-        @"path": path,
-        @"query": _asciiEncodeString(query),
-        @"mode": @"filename"
-    }];
+    NSURLRequest *const request = _apiRequest(@"/2/files/search", accessToken,
+                                              @{
+                                                  @"path": path,
+                                                  @"query": _asciiEncodeString(query),
+                                                  @"mode": @"filename"
+                                              });
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"matches"], error);
     }];
@@ -890,7 +897,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
             [parameters setObject:@"file" forKey:@"pending_upload"];
         }
     }
-    NSURLRequest *const request = [self apiRequestWithPath:requestPath accessToken:accessToken parameters:parameters];
+    NSURLRequest *const request = _apiRequest(requestPath, accessToken, parameters);
     [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         NSString *urlString = parsedResponse[@"url"];
         if (urlString.length == 0) {
@@ -915,7 +922,7 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
 
 + (void)getSpaceUsageForUserWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self apiRequestWithPath:@"/2/users/get_space_usage" accessToken:accessToken parameters:nil];
+    NSURLRequest *const request = _apiRequest(@"/2/users/get_space_usage", accessToken, nil);
     [self performAPIRequest:request withCompletion:completion];
 }
 
