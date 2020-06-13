@@ -264,9 +264,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     
     NSMutableURLRequest *const request = _apiRequest(@"/2/auth/token/revoke", token, nil);
     
-    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
+    _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
         completion(error == nil, error);
-    }];
+    });
 }
 
 #pragma mark - Generic
@@ -400,17 +400,17 @@ static void _addTask(NSURLSessionTask *const task)
     [task resume];
 }
 
-+ (void)performAPIRequest:(NSURLRequest *)request withCompletion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+static void _performAPIRequest(NSURLRequest *const request, void (^const completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
     NSURLSessionTask *const task = [_session() dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        [TJDropbox processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
         completion(parsedResult, error);
     }];
     _addTask(task);
 }
 
-+ (NSData *)resultDataForContentRequestResponse:(NSURLResponse *const)response
+static NSData *_resultDataForContentRequestResponse(NSURLResponse *const response)
 {
     NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
     NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
@@ -480,9 +480,9 @@ static void _addTask(NSURLSessionTask *const task)
     NSString *const authorization = [NSString stringWithFormat:@"Basic %@", authString];
     [request addValue:authorization forHTTPHeaderField:@"Authorization"];
     
-    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
+    _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
         completion(parsedResponse[@"oauth2_token"], error);
-    }];
+    });
 }
 
 
@@ -491,7 +491,7 @@ static void _addTask(NSURLSessionTask *const task)
 + (void)getAccountInformationWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = _apiRequest(@"/2/users/get_current_account", accessToken, nil);
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 #pragma mark - File Inspection
@@ -524,7 +524,7 @@ static void _addTask(NSURLSessionTask *const task)
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted];
-    [self performAPIRequest:request withCompletion:^(NSDictionary *parsedResponse, NSError *error) {
+    _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
             NSArray *newlyAccumulatedFiles;
@@ -554,7 +554,7 @@ static void _addTask(NSURLSessionTask *const task)
         } else {
             completion(nil, nil, error);
         }
-    }];
+    });
 }
 
 + (void)getFileInfoAtPath:(NSString *const)remotePath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable entry, NSError *_Nullable error))completion
@@ -564,7 +564,7 @@ static void _addTask(NSURLSessionTask *const task)
                                                   @"path" : _asciiEncodeString(remotePath)
                                               });
     
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 #pragma mark - File Manipulation
@@ -590,7 +590,7 @@ static void _addTask(NSURLSessionTask *const task)
     [_taskDelegate() setProgressBlock:progressBlock
                           completionBlock:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                               NSDictionary *parsedResult = nil;
-                              NSData *const resultData = [self resultDataForContentRequestResponse:response];
+                              NSData *const resultData = _resultDataForContentRequestResponse(response);
                               [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
                               
                               if (!error && location) {
@@ -758,7 +758,7 @@ static void _addTask(NSURLSessionTask *const task)
                                                   @"path": _asciiEncodeString(path)
                                               });
     
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 + (void)saveContentsOfURL:(NSURL *const)url toPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -769,7 +769,7 @@ static void _addTask(NSURLSessionTask *const task)
                                                   @"path": path
                                               });
     
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 + (void)moveFileAtPath:(NSString *const)fromPath toPath:(NSString *const)toPath accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -780,7 +780,7 @@ static void _addTask(NSURLSessionTask *const task)
                                                   @"to_path" : _asciiEncodeString(toPath)
                                               });
     
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 + (void)deleteFileAtPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -789,7 +789,7 @@ static void _addTask(NSURLSessionTask *const task)
                                               @{
                                                   @"path": _asciiEncodeString(path)
                                               });
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 + (NSURLRequest *)requestToDownloadThumbnailAtPath:(NSString *const)path size:(const TJDropboxThumbnailSize)thumbnailSize accessToken:(NSString *const )accessToken
@@ -830,7 +830,7 @@ static void _addTask(NSURLSessionTask *const task)
     [_taskDelegate() setProgressBlock:nil
                           completionBlock:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                               NSDictionary *parsedResult = nil;
-                              NSData *const resultData = [self resultDataForContentRequestResponse:response];
+                              NSData *const resultData = _resultDataForContentRequestResponse(response);
                               [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
                               
                               if (!error && location) {
@@ -863,9 +863,9 @@ static void _addTask(NSURLSessionTask *const task)
                                                   @"query": _asciiEncodeString(query),
                                                   @"mode": @"filename"
                                               });
-    [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+    _performAPIRequest(request, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"matches"], error);
-    }];
+    });
 }
 
 #pragma mark - Sharing
@@ -892,7 +892,7 @@ static void _addTask(NSURLSessionTask *const task)
         }
     }
     NSURLRequest *const request = _apiRequest(requestPath, accessToken, parameters);
-    [self performAPIRequest:request withCompletion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+    _performAPIRequest(request, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         NSString *urlString = parsedResponse[@"url"];
         if (urlString.length == 0) {
             urlString = parsedResponse[@"error"][@"shared_link_already_exists"][@"metadata"][@"url"];
@@ -909,7 +909,7 @@ static void _addTask(NSURLSessionTask *const task)
             urlString = components.URL.absoluteString;
         }
         completion(urlString);
-    }];
+    });
 }
 
 #pragma mark - Users
@@ -917,7 +917,7 @@ static void _addTask(NSURLSessionTask *const task)
 + (void)getSpaceUsageForUserWithAccessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     NSURLRequest *const request = _apiRequest(@"/2/users/get_space_usage", accessToken, nil);
-    [self performAPIRequest:request withCompletion:completion];
+    _performAPIRequest(request, completion);
 }
 
 #pragma mark - Request Management
