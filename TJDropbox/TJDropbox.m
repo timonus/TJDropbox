@@ -665,7 +665,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             unsigned long long fileSize = [fileHandle seekToEndOfFile];
             [fileHandle seekToFileOffset:0];
             
-            [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath overwriteExisting:overwriteExisting muteDesktopNotifications:muteDesktopNotifications accessToken:accessToken progressBlock:progressBlock completion:completion];
+            _uploadChunk(fileHandle, fileSize, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, accessToken, progressBlock, completion);
         } else {
             completion(parsedResult, error);
         }
@@ -673,7 +673,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
     _addTask(task);
 }
 
-+ (void)uploadChunkFromFileHandle:(NSFileHandle *const)fileHandle fileSize:(unsigned long long)fileSize sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(NSString *const)accessToken progressBlock:(void (^)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long fileSize, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, NSString *const accessToken, void (^progressBlock)(CGFloat progress), void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
     const unsigned long long offset = fileHandle.offsetInFile;
     static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
@@ -710,10 +710,10 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                                   completion(parsedResult, error);
                               } else if (isLastChunk) {
                                   // Finish the upload
-                                  [self finishLargeUploadFromFileHandle:fileHandle sessionIdentifier:sessionIdentifier remotePath:remotePath overwriteExisting:overwriteExisting muteDesktopNotifications:muteDesktopNotifications accessToken:accessToken completion:completion];
+                                  _finishLargeUpload(fileHandle, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, accessToken, completion);
                               } else {
                                   // Upload next chunk
-                                  [self uploadChunkFromFileHandle:fileHandle fileSize:fileSize sessionIdentifier:sessionIdentifier remotePath:remotePath overwriteExisting:overwriteExisting muteDesktopNotifications:muteDesktopNotifications accessToken:accessToken progressBlock:progressBlock completion:completion];
+                                  _uploadChunk(fileHandle, fileSize, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, accessToken, progressBlock, completion);
                               }
                           }
                               forDataTask:task];
@@ -721,7 +721,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
     _addTask(task);
 }
 
-+ (void)finishLargeUploadFromFileHandle:(NSFileHandle *const)fileHandle sessionIdentifier:(NSString *const)sessionIdentifier remotePath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications accessToken:(NSString *const)accessToken completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
+static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, NSString *const accessToken, void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
     NSNumber *const offset = @(fileHandle.offsetInFile);
     
