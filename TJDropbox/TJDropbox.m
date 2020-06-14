@@ -404,7 +404,7 @@ static void _performAPIRequest(NSURLRequest *const request, void (^const complet
 {
     NSURLSessionTask *const task = [_session() dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        [TJDropbox processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        _processResult(data, response, &error, &parsedResult);
         completion(parsedResult, error);
     }];
     _addTask(task);
@@ -418,15 +418,15 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
     return resultData;
 }
 
-+ (BOOL)processResultJSONData:(NSData *const)data response:(NSURLResponse *const)response error:(inout NSError **)error parsedResult:(out NSDictionary **)parsedResult
+static BOOL _processResult(NSData *const jsonData, NSURLResponse *const response, NSError **error, NSDictionary **parsedResult)
 {
     NSString *errorString = nil;
-    if (data.length > 0) {
-        id result = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    if (jsonData.length > 0) {
+        id result = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:nil];
         if ([result isKindOfClass:[NSDictionary class]]) {
             *parsedResult = result;
         } else {
-            errorString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            errorString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
         }
     }
     
@@ -591,7 +591,7 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
                           completionBlock:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                               NSDictionary *parsedResult = nil;
                               NSData *const resultData = _resultDataForContentRequestResponse(response);
-                              [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+                              _processResult(resultData, response, &error, &parsedResult);
                               
                               if (!error && location) {
                                   NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -635,7 +635,7 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
     [_taskDelegate() setProgressBlock:progressBlock
                           completionBlock:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                               NSDictionary *parsedResult = nil;
-                              [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+                              _processResult(data, response, &error, &parsedResult);
                               
                               completion(parsedResult, error);
                           }
@@ -656,7 +656,7 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
     
     NSURLSessionTask *const task = [_session() dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        _processResult(data, response, &error, &parsedResult);
         
         NSString *const sessionIdentifier = parsedResult[@"session_id"];
         if (sessionIdentifier) {
@@ -703,7 +703,7 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
     [_taskDelegate() setProgressBlock:progressBlock
                           completionBlock:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                               NSDictionary *parsedResult = nil;
-                              [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+                              _processResult(data, response, &error, &parsedResult);
                               
                               if (error && [(NSHTTPURLResponse *)response statusCode] != 200) {
                                   // Error encountered
@@ -745,7 +745,7 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
     
     NSURLSessionTask *const task = [_session() dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         NSDictionary *parsedResult = nil;
-        [self processResultJSONData:data response:response error:&error parsedResult:&parsedResult];
+        _processResult(data, response, &error, &parsedResult);
         completion(parsedResult, error);
     }];
     _addTask(task);
@@ -831,7 +831,7 @@ static NSData *_resultDataForContentRequestResponse(NSURLResponse *const respons
                           completionBlock:^(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error) {
                               NSDictionary *parsedResult = nil;
                               NSData *const resultData = _resultDataForContentRequestResponse(response);
-                              [self processResultJSONData:resultData response:response error:&error parsedResult:&parsedResult];
+                              _processResult(resultData, response, &error, &parsedResult);
                               
                               if (!error && location) {
                                   NSFileManager *fileManager = [NSFileManager defaultManager];
