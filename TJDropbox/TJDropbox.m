@@ -513,7 +513,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
 
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    [self listFolderWithPath:path cursor:nil includeDeleted:NO accessToken:accessToken completion:completion];
+    [self listFolderWithPath:path accessToken:accessToken cursor:nil includeDeleted:NO accumulatedFiles:nil completion:completion];
 }
 
 + (void)listFolderWithPath:(NSString *const)path cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
