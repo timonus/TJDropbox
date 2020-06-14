@@ -50,8 +50,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
     return self;
 }
 
-- (void)setProgressBlock:(nullable const void (^)(CGFloat progress))progressBlock
-         completionBlock:(nullable const void (^)(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error))completionBlock
+- (void)setProgressBlock:(nullable void (^const)(CGFloat progress))progressBlock
+         completionBlock:(nullable void (^const)(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error))completionBlock
              forDataTask:(NSURLSessionDataTask *const)task
 {
     [self _setProgressBlock:progressBlock
@@ -60,8 +60,8 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
               expectedClass:[NSURLSessionDataTask class]];
 }
 
-- (void)setProgressBlock:(nullable const void (^)(CGFloat progress))progressBlock
-         completionBlock:(nullable const void (^)(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error))completionBlock
+- (void)setProgressBlock:(nullable void (^const)(CGFloat progress))progressBlock
+         completionBlock:(nullable void (^const)(NSURL * _Nullable location, NSURLResponse * _Nullable response, NSError * _Nullable error))completionBlock
          forDownloadTask:(NSURLSessionDownloadTask *const)task
 {
         [self _setProgressBlock:progressBlock
@@ -70,7 +70,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
                   expectedClass:[NSURLSessionDownloadTask class]];
 }
 
-- (void)_setProgressBlock:(nullable const void (^)(CGFloat progress))progressBlock
+- (void)_setProgressBlock:(nullable void (^const)(CGFloat progress))progressBlock
           completionBlock:(nullable const id)completionBlock
                   forTask:(NSURLSessionTask *const)task
             expectedClass:(Class)expectedClass
