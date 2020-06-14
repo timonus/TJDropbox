@@ -20,7 +20,7 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
  * They should be accessed via -setProgressBlock:completionBlock:for*Task: ONLY to ensure safety is maintained.
  */
 
-@property (nonatomic) NSMutableDictionary *progressBlocksForTasks;
+@property (nonatomic) NSMutableDictionary<NSURLSessionTask *, void (^)(CGFloat)> *progressBlocksForTasks;
 @property (nonatomic) NSMutableDictionary<NSURLSessionTask *, NSMutableData *> *accumulatedDataForDataTasks;
 @property (nonatomic) NSMutableDictionary *completionBlocksForTasks;
 
