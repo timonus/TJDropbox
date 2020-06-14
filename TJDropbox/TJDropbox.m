@@ -496,7 +496,7 @@ static BOOL _processResult(NSData *const jsonData, NSURLResponse *const response
 
 #pragma mark - File Inspection
 
-+ (NSURLRequest *)listFolderRequestWithPath:(NSString *const)filePath accessToken:(NSString *const)accessToken cursor:(nullable NSString *const)cursor includeDeleted:(const BOOL)includeDeleted
+static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *const accessToken, NSString *_Nullable const cursor, const BOOL includeDeleted)
 {
     NSString *const urlPath = cursor.length > 0 ? @"/2/files/list_folder/continue" : @"/2/files/list_folder";
     NSMutableDictionary *const parameters = [NSMutableDictionary new];
@@ -523,7 +523,7 @@ static BOOL _processResult(NSData *const jsonData, NSURLResponse *const response
 
 + (void)listFolderWithPath:(NSString *const)path accessToken:(NSString *const)accessToken cursor:(NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = [self listFolderRequestWithPath:path accessToken:accessToken cursor:cursor includeDeleted:includeDeleted];
+    NSURLRequest *const request = _listFolderRequest(path, accessToken, cursor, includeDeleted);
     _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
         if (!error) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
