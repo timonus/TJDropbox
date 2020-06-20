@@ -413,7 +413,13 @@ static void _performAPIRequest(NSURLRequest *const request, void (^const complet
 static NSData *_resultDataForContentRequestResponse(NSURLResponse *const response)
 {
     NSHTTPURLResponse *const httpURLResponse = [response isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)response : nil;
-    NSString *const resultString = httpURLResponse.allHeaderFields[@"Dropbox-API-Result"];
+    NSString *resultString;
+    static NSString *const kDropboxAPIResultHeaderFieldKey = @"Dropbox-API-Result";
+    if (@available(iOS 13.0, macOS 10.15, *)) {
+        resultString = [httpURLResponse valueForHTTPHeaderField:kDropboxAPIResultHeaderFieldKey];
+    } else {
+        resultString = httpURLResponse.allHeaderFields[kDropboxAPIResultHeaderFieldKey];
+    }
     NSData *const resultData = [resultString dataUsingEncoding:NSUTF8StringEncoding];
     return resultData;
 }
