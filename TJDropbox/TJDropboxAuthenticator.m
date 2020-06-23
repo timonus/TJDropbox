@@ -10,6 +10,9 @@
 #import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @interface TJDropboxAuthenticator ()
 
 @property (nonatomic, copy, class) NSString *tj_clientIdentifier;
@@ -17,6 +20,9 @@
 
 @end
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @implementation TJDropboxAuthenticator
 
 static NSString *_tj_clientIdentifier;

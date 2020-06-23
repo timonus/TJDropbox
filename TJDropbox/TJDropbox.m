@@ -13,6 +13,9 @@ NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
 NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @interface TJDropboxURLSessionTaskDelegate : NSObject <NSURLSessionDataDelegate, NSURLSessionDownloadDelegate>
 
 /**
@@ -32,6 +35,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @end
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @implementation TJDropboxURLSessionTaskDelegate
 
 - (instancetype)init
@@ -153,6 +159,9 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
 @end
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @implementation TJDropbox
 
 #pragma mark - Authentication
