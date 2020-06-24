@@ -7,6 +7,7 @@
 //
 
 #import "TJDropbox.h"
+#import <CommonCrypto/CommonDigest.h>
 
 NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
@@ -166,28 +167,54 @@ __attribute__((objc_direct_members))
 
 #pragma mark - Authentication
 
-+ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier redirectURL:(NSURL *const)redirectURL
+// Copied from https://bit.ly/2NeKGi2
+static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
+{
+  // Creates code challenge according to [RFC7636 4.2] (https://tools.ietf.org/html/rfc7636#section-4.2)
+  // 1. Covert code verifier to ascii encoded string.
+  // 2. Compute the SHA256 hash of the ascii string.
+  // 3. Base64 encode the resulting hash.
+  // 4. Make the Base64 string URL safe by replacing a few characters. (https://tools.ietf.org/html/rfc4648#section-5)
+  const char *asciiString = [codeVerifier cStringUsingEncoding:NSASCIIStringEncoding];
+  NSData *data = [NSData dataWithBytes:asciiString length:strlen(asciiString)];
+  unsigned char digest[CC_SHA256_DIGEST_LENGTH] = {0};
+  CC_SHA256(data.bytes, (CC_LONG)data.length, digest);
+  NSData *sha256Data = [NSData dataWithBytes:digest length:CC_SHA256_DIGEST_LENGTH];
+  NSString *base64String = [sha256Data base64EncodedStringWithOptions:kNilOptions];
+  base64String = [base64String stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
+  base64String = [base64String stringByReplacingOccurrencesOfString:@"+" withString:@"-"];
+  base64String = [base64String stringByReplacingOccurrencesOfString:@"=" withString:@""];
+  return base64String;
+}
+
++ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
+                                          redirectURL:(nullable NSURL *)redirectURL
+                                         codeVerifier:(nullable NSString *const)codeVerifier
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth
     
+    if (!redirectURL) {
+        redirectURL = [self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier];
+    }
+    NSString *const codeChallenge = codeVerifier ? _codeChallengeFromCodeVerifier(codeVerifier) : nil;
+    
     NSURLComponents *const components = [NSURLComponents componentsWithURL:[NSURL URLWithString:@"https://www.dropbox.com/oauth2/authorize"] resolvingAgainstBaseURL:NO];
-    components.queryItems = @[
-        [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
-        [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
-        [NSURLQueryItem queryItemWithName:@"response_type" value:@"token"],
-        [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"]
-    ];
+    components.queryItems = [NSArray arrayWithObjects:
+                             [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+                             [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
+                             [NSURLQueryItem queryItemWithName:@"response_type" value:codeChallenge ? @"code" : @"token"],
+                             [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
+                             // Following params only apply if verifier is supplied
+                             codeChallenge ? [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge] : nil,
+                             [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
+                             nil
+                             ];
     return components.URL;
 }
 
 + (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier
 {
     return [NSURL URLWithString:[NSString stringWithFormat:@"db-%@://2/token", clientIdentifier]];
-}
-
-+ (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
-{
-    return [self tokenAuthenticationURLWithClientIdentifier:clientIdentifier redirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
 + (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
@@ -210,6 +237,32 @@ __attribute__((objc_direct_members))
 + (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
 {
     return [self accessTokenFromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
+}
+
++ (void)accessTokenFromCode:(NSString *const)code
+       withClientIdentifier:(NSString *const)clientIdentifier
+               codeVerifier:(NSString *const)codeVerifier
+                redirectURL:(NSURL *const)redirectURL
+                 completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
+{
+    // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
+    // https://bit.ly/3fKbMd3
+    
+    NSMutableURLRequest *const request = _apiRequest(@"/oauth2/token", nil, nil);
+    NSURLComponents *const components = [NSURLComponents new];
+    components.queryItems = @[
+        [NSURLQueryItem queryItemWithName:@"grant_type" value:@"authorization_code"],
+        [NSURLQueryItem queryItemWithName:@"code" value:code],
+        [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+        [NSURLQueryItem queryItemWithName:@"code_verifier" value:codeVerifier],
+        [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
+    ];
+    request.HTTPBody = [components.query dataUsingEncoding:NSUTF8StringEncoding];
+    [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
+        completion(parsedResponse[@"access_token"], error);
+    });
 }
 
 + (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
@@ -235,18 +288,39 @@ __attribute__((objc_direct_members))
 }
 
 + (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
+                                              codeVerifier:(nullable NSString *const)codeVerifier
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L288-L303
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L274-L282
     
     NSURLComponents *const components = [NSURLComponents componentsWithString:@"dbapi-2://1/connect"];
-    NSString *const nonce = [[NSUUID UUID] UUIDString];
-    NSString *const stateString = [NSString stringWithFormat:@"oauth2:%@", nonce];
-    components.queryItems = @[
-        [NSURLQueryItem queryItemWithName:@"k" value:clientIdentifier],
-        [NSURLQueryItem queryItemWithName:@"s" value:@""],
-        [NSURLQueryItem queryItemWithName:@"state" value:stateString]
-    ];
+    
+    NSString *stateString;
+    NSString *extraQueryParams = nil;
+    if (codeVerifier) {
+        NSString *const codeChallenge = _codeChallengeFromCodeVerifier(codeVerifier);
+        stateString = [NSString stringWithFormat:@"oauth2code:%@:S256:", codeChallenge];
+        
+        NSURLComponents *const extraComponents = [NSURLComponents new];
+        extraComponents.queryItems = @[
+            [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
+            [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
+            [NSURLQueryItem queryItemWithName:@"response_type" value:@"code"],
+        ];
+        extraQueryParams = extraComponents.query;
+    } else {
+        NSString *const nonce = [[NSUUID UUID] UUIDString];
+        stateString = [NSString stringWithFormat:@"oauth2:%@", nonce];
+    }
+    
+    components.queryItems = [NSArray arrayWithObjects:
+                             [NSURLQueryItem queryItemWithName:@"k" value:clientIdentifier],
+                             [NSURLQueryItem queryItemWithName:@"s" value:@""],
+                             [NSURLQueryItem queryItemWithName:@"state" value:stateString],
+                             // Following params only apply if verifier is supplied https://bit.ly/37OmYmh
+                             extraQueryParams ? [NSURLQueryItem queryItemWithName:@"extra_query_params" value:extraQueryParams] : nil,
+                             nil
+                             ];
     return components.URL;
 }
 
@@ -499,7 +573,6 @@ static BOOL _processResult(NSData *const jsonData, NSURLResponse *const response
         completion(parsedResponse[@"oauth2_token"], error);
     });
 }
-
 
 #pragma mark - Account Info
 
