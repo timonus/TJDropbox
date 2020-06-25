@@ -78,7 +78,8 @@ static void (^_tj_completion)(NSString *accessToken);
 
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
-                              completion:(void (^)(NSString *))completion
+                           bypassingPKCE:(const BOOL)bypassingPKCE
+                              completion:(void (^)(NSString *_Nullable accessToken))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     if (![[[[NSBundle mainBundle] infoDictionary] valueForKeyPath:@"CFBundleURLTypes.CFBundleURLSchemes.@unionOfArrays.self"] containsObject:redirectURLScheme]) { // https://forums.developer.apple.com/thread/31307
@@ -87,7 +88,7 @@ static void (^_tj_completion)(NSString *accessToken);
         return;
     }
     
-    NSString *const codeVerifier = [NSString stringWithFormat:@"%@-%@", [[NSUUID UUID] UUIDString], [[NSUUID UUID] UUIDString]];
+    NSString *const codeVerifier = bypassingPKCE ? nil : [NSString stringWithFormat:@"%@-%@", [[NSUUID UUID] UUIDString], [[NSUUID UUID] UUIDString]];
     if (bypassNativeAuth) {
         [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                              codeVerifier:codeVerifier
