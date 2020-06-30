@@ -198,15 +198,26 @@ static void (^_tj_completion)(NSString *accessToken);
         }
         if (code) {
             if (codeVerifier) {
-                [TJDropbox accessTokenFromCode:code
-                          withClientIdentifier:clientIdentifier
-                                  codeVerifier:codeVerifier
-                                   redirectURL:redirectURL
-                                    completion:^(NSString * _Nullable accessToken, NSError * _Nullable error) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        completion(accessToken);
+                // Initiating requests while the app is entering the foreground often leads to failures since we're not using background tasks.
+                // Let's wait until we're definitely active to perform our auth request.
+                if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        [self tryHandleAuthenticationCallbackWithURL:url
+                                                    clientIdentifier:clientIdentifier
+                                                        codeVerifier:codeVerifier
+                                                          completion:completion];
                     });
-                }];
+                } else {
+                    [TJDropbox accessTokenFromCode:code
+                              withClientIdentifier:clientIdentifier
+                                      codeVerifier:codeVerifier
+                                       redirectURL:redirectURL
+                                        completion:^(NSString * _Nullable accessToken, NSError * _Nullable error) {
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            completion(accessToken);
+                        });
+                    }];
+                }
             } else {
                 completion(nil);
             }
