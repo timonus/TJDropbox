@@ -943,13 +943,15 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
 
 #pragma mark - Search
 
-+ (void)searchForFilesAtPath:(NSString *const)path matchingQuery:(NSString *const)query accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray *_Nullable entries, NSError *_Nullable error))completion
++ (void)searchForFilesAtPath:(NSString *const)path matchingQuery:(NSString *const)query options:(NSDictionary *const)additionalOptions accessToken:(NSString *const)accessToken completion:(void (^const)(NSArray *_Nullable entries, NSError *_Nullable error))completion
 {
-    NSURLRequest *const request = _apiRequest(@"/2/files/search", accessToken,
+    // https://www.dropbox.com/developers/documentation/http/documentation?oref=e#files-search
+    NSMutableDictionary *const options = [NSMutableDictionary dictionaryWithObjectsAndKeys:path, @"path", nil];
+    [options addEntriesFromDictionary:additionalOptions];
+    NSURLRequest *const request = _apiRequest(@"/2/files/search_v2", accessToken,
                                               @{
-                                                  @"path": path,
                                                   @"query": _asciiEncodeString(query),
-                                                  @"mode": @"filename"
+                                                  @"options": options
                                               });
     _performAPIRequest(request, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         completion(parsedResponse[@"matches"], error);
