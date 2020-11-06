@@ -7,8 +7,10 @@
 
 #import "TJDropbox.h"
 #import "TJDropboxAuthenticator.h"
-#import <SafariServices/SafariServices.h>
 #import <AuthenticationServices/AuthenticationServices.h>
+#if !defined(__IPHONE_12_0) || __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_12_0
+#import <SafariServices/SafariServices.h>
+#endif
 
 // DO NOT mark as Obj-C direct, will lead to exceptions.
 @interface TJDropboxAuthenticatorWebAuthenticationPresentationContextProvider : NSObject
