@@ -124,7 +124,7 @@ static void (^_tj_completion)(NSString *accessToken);
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     
     // Reference needs to be held as long as this is in progress, otherwise the UI disappears.
-    static id session = nil;
+    static id session;
     void (^completionHandler)(NSURL *, NSError *) = ^(NSURL * _Nullable callbackURL, NSError * _Nullable error) {
         // Process results.
         [self tryHandleAuthenticationCallbackWithURL:callbackURL

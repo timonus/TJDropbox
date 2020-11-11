@@ -438,7 +438,7 @@ static NSMutableURLRequest *_contentRequest(NSString *const path, NSString *cons
 
 static TJDropboxURLSessionTaskDelegate *_taskDelegate()
 {
-    static TJDropboxURLSessionTaskDelegate *taskDelegate = nil;
+    static TJDropboxURLSessionTaskDelegate *taskDelegate;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         taskDelegate = [TJDropboxURLSessionTaskDelegate new];
@@ -448,7 +448,7 @@ static TJDropboxURLSessionTaskDelegate *_taskDelegate()
 
 static NSURLSession *_session()
 {
-    static NSURLSession *session = nil;
+    static NSURLSession *session;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         TJDropboxURLSessionTaskDelegate *taskDelegate = _taskDelegate();
@@ -464,7 +464,7 @@ static NSURLSession *_session()
 static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *> *tasks))
 {
     static dispatch_queue_t tasksQueue;
-    static NSHashTable<NSURLSessionTask *> *hashTable = nil;
+    static NSHashTable<NSURLSessionTask *> *hashTable;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         tasksQueue = dispatch_queue_create("TJDropbox Tasks Queue", DISPATCH_QUEUE_SERIAL);
