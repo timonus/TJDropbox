@@ -330,12 +330,15 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
         stateString = [NSString stringWithFormat:@"oauth2code:%@:S256:", codeChallenge];
         
         NSURLComponents *const extraComponents = [NSURLComponents new];
-        extraComponents.queryItems = @[
-            [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
-            [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
-            [NSURLQueryItem queryItemWithName:@"response_type" value:@"code"],
-            [NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"] // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
-        ];
+        NSMutableArray<NSURLQueryItem *> *const queryItems = [NSMutableArray arrayWithObjects:
+                                                              [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
+                                                              [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
+                                                              [NSURLQueryItem queryItemWithName:@"response_type" value:@"code"],
+                                                              nil
+                                                              ];
+        if (generateRefreshToken) {
+            [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
+        }
         extraQueryParams = extraComponents.query;
     } else {
         NSString *const nonce = [[NSUUID UUID] UUIDString];
