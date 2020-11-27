@@ -42,7 +42,8 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 /// Used to return the URL used to initate OAuth with Dropbox
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                           redirectURL:(nullable NSURL *)redirectURL
-                                         codeVerifier:(nullable NSString *const)codeVerifier;
+                                         codeVerifier:(nullable NSString *const)codeVerifier
+                                 generateRefreshToken:(const BOOL)generateRefreshToken;
 
 /// Provides "default" app URL scheme that auth redirects back to (used by @c +tokenAuthenticationURLWithClientIdentifier: and @c +accessTokenFromURL:withClientIdentifier: internally).
 + (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier;
@@ -57,13 +58,18 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
                 redirectURL:(NSURL *const)redirectURL
                  completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion; /// PKCE variant (more secure)
 
++ (void)accessTokenFromRefreshToken:(NSString *const)refreshToken
+               withClientIdentifier:(NSString *const)clientIdentifier
+                         completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion;
+
 /// Check if there was an authentication error (also happens when the user presses cancel on the website)
 + (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
 + (BOOL)isAuthenticationErrorURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
 
 /// Used to return the URL used to initiate authentication with the installed Dropbox app
 + (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
-                                              codeVerifier:(nullable NSString *const)codeVerifier;
+                                              codeVerifier:(nullable NSString *const)codeVerifier
+                                      generateRefreshToken:(const BOOL)generateRefreshToken;
 
 /// Used to extract the access token from Dropbox app authentication
 + (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url;

@@ -190,6 +190,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                           redirectURL:(nullable NSURL *)redirectURL
                                          codeVerifier:(nullable NSString *const)codeVerifier
+                                 generateRefreshToken:(const BOOL)generateRefreshToken
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth
     
@@ -199,16 +200,20 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     NSString *const codeChallenge = codeVerifier ? _codeChallengeFromCodeVerifier(codeVerifier) : nil;
     
     NSURLComponents *const components = [NSURLComponents componentsWithURL:[NSURL URLWithString:@"https://www.dropbox.com/oauth2/authorize"] resolvingAgainstBaseURL:NO];
-    components.queryItems = [NSArray arrayWithObjects:
-                             [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
-                             [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
-                             [NSURLQueryItem queryItemWithName:@"response_type" value:codeChallenge ? @"code" : @"token"],
-                             [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
-                             // Following params only apply if verifier is supplied
-                             codeChallenge ? [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge] : nil,
-                             [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
-                             nil
-                             ];
+    NSMutableArray<NSURLQueryItem *> *const queryItems = [NSMutableArray arrayWithObjects:
+                                                          [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+                                                          [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
+                                                          [NSURLQueryItem queryItemWithName:@"response_type" value:codeChallenge ? @"code" : @"token"],
+                                                          [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
+                                                          // Following params only apply if verifier is supplied
+                                                          codeChallenge ? [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge] : nil,
+                                                          [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
+                                                          nil
+                                                          ];
+    if (generateRefreshToken) {
+        [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
+    }
+    components.queryItems = queryItems;
     return components.URL;
 }
 
@@ -265,6 +270,28 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     });
 }
 
++ (void)accessTokenFromRefreshToken:(NSString *const)refreshToken
+               withClientIdentifier:(NSString *const)clientIdentifier
+                         completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
+{
+    // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
+    // https://bit.ly/3fKbMd3
+    
+    NSMutableURLRequest *const request = _apiRequest(@"/oauth2/token", nil, nil);
+    NSURLComponents *const components = [NSURLComponents new];
+    components.queryItems = @[
+        [NSURLQueryItem queryItemWithName:@"grant_type" value:@"refresh_token"],
+        [NSURLQueryItem queryItemWithName:@"refresh_token" value:refreshToken],
+        [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+    ];
+    request.HTTPBody = [components.query dataUsingEncoding:NSUTF8StringEncoding];
+    [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
+        completion(parsedResponse[@"access_token"], error);
+    });
+}
+
 + (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
 {
     // when the user presses the cancel button on the website, this URL is returned:
@@ -289,6 +316,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
 
 + (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                               codeVerifier:(nullable NSString *const)codeVerifier
+                                      generateRefreshToken:(const BOOL)generateRefreshToken
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L288-L303
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L274-L282
@@ -306,6 +334,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
             [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
             [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
             [NSURLQueryItem queryItemWithName:@"response_type" value:@"code"],
+            [NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"] // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
         ];
         extraQueryParams = extraComponents.query;
     } else {

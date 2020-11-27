@@ -81,6 +81,7 @@ static void (^_tj_completion)(NSString *accessToken);
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
                            bypassingPKCE:(const BOOL)bypassingPKCE
+                    generateRefreshToken:(const BOOL)generateRefreshToken
                               completion:(void (^)(NSString *_Nullable accessToken))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
@@ -94,10 +95,12 @@ static void (^_tj_completion)(NSString *accessToken);
     if (bypassNativeAuth) {
         [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                              codeVerifier:codeVerifier
+                                     generateRefreshToken:generateRefreshToken
                                                completion:completion];
     } else {
         NSURL *const tokenAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier
-                                                                                  codeVerifier:codeVerifier];
+                                                                                  codeVerifier:codeVerifier
+                                                                          generateRefreshToken:generateRefreshToken];
         [[UIApplication sharedApplication] openURL:tokenAuthURL
                                            options:@{}
                                  completionHandler:^(BOOL success) {
@@ -108,6 +111,7 @@ static void (^_tj_completion)(NSString *accessToken);
             } else {
                 [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                                      codeVerifier:codeVerifier
+                                             generateRefreshToken:generateRefreshToken
                                                        completion:completion];
             }
         }];
@@ -116,11 +120,13 @@ static void (^_tj_completion)(NSString *accessToken);
 
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
                                        codeVerifier:(NSString *const)codeVerifier
+                               generateRefreshToken:(const BOOL)generateRefreshToken
                                          completion:(void (^)(NSString *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
                                                                  redirectURL:nil
-                                                                codeVerifier:codeVerifier];
+                                                                codeVerifier:codeVerifier
+                                                        generateRefreshToken:generateRefreshToken];
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     
     // Reference needs to be held as long as this is in progress, otherwise the UI disappears.
