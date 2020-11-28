@@ -230,15 +230,18 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
         components.query = fragment;
         for (NSURLQueryItem *const item in components.queryItems) {
             if ([item.name isEqualToString:@"access_token"]) {
-                *accessToken = item.value;
-                break;
+                if (accessToken) {
+                    *accessToken = item.value;
+                }
+            } else if ([item.name isEqual:@"refresh_token"]) {
+                if (refreshToken) {
+                    *refreshToken = item.value;
+                }
             }
-            // todo
         }
     }
 }
 
-//+ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
 + (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
 {
     [self accessToken:accessToken refreshToken:refreshToken fromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
@@ -247,6 +250,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
 + (void)accessTokenFromCode:(NSString *const)code
        withClientIdentifier:(NSString *const)clientIdentifier
                codeVerifier:(NSString *const)codeVerifier
+       generateRefreshToken:(const BOOL)generateRefreshToken
                 redirectURL:(NSURL *const)redirectURL
                  completion:(nonnull void (^const)(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSError * _Nullable))completion
 {
@@ -255,13 +259,18 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     
     NSMutableURLRequest *const request = _apiRequest(@"/oauth2/token", nil, nil);
     NSURLComponents *const components = [NSURLComponents new];
-    components.queryItems = @[
-        [NSURLQueryItem queryItemWithName:@"grant_type" value:@"authorization_code"],
-        [NSURLQueryItem queryItemWithName:@"code" value:code],
-        [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
-        [NSURLQueryItem queryItemWithName:@"code_verifier" value:codeVerifier],
-        [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
-    ];
+    NSMutableArray<NSURLQueryItem *> *const queryItems = [NSMutableArray arrayWithObjects:
+                                                          [NSURLQueryItem queryItemWithName:@"grant_type" value:@"authorization_code"],
+                                                          [NSURLQueryItem queryItemWithName:@"code" value:code],
+                                                          [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+                                                          [NSURLQueryItem queryItemWithName:@"code_verifier" value:codeVerifier],
+                                                          [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
+                                                          nil];
+    if (generateRefreshToken) {
+        [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
+    }
+    components.queryItems = queryItems;
+    // include here too??
     request.HTTPBody = [components.query dataUsingEncoding:NSUTF8StringEncoding];
     [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
     
@@ -329,7 +338,6 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
         NSString *const codeChallenge = _codeChallengeFromCodeVerifier(codeVerifier);
         stateString = [NSString stringWithFormat:@"oauth2code:%@:S256:", codeChallenge];
         
-        NSURLComponents *const extraComponents = [NSURLComponents new];
         NSMutableArray<NSURLQueryItem *> *const queryItems = [NSMutableArray arrayWithObjects:
                                                               [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
                                                               [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
@@ -339,6 +347,8 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
         if (generateRefreshToken) {
             [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
         }
+        NSURLComponents *const extraComponents = [NSURLComponents new];
+        extraComponents.queryItems = queryItems;
         extraQueryParams = extraComponents.query;
     } else {
         NSString *const nonce = [[NSUUID UUID] UUIDString];
@@ -356,7 +366,6 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return components.URL;
 }
 
-//+ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url
 + (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromDropboxAppAuthenticationURL:(NSURL *const)url
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L360-L383

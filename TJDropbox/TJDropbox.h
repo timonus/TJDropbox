@@ -49,15 +49,14 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 + (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier;
 
 /// Used to extract the access token returned from Dropbox OAuth
-//+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
 + (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
-//+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
 + (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
 
 
 + (void)accessTokenFromCode:(NSString *const)code
        withClientIdentifier:(NSString *const)clientIdentifier
                codeVerifier:(NSString *const)codeVerifier
+       generateRefreshToken:(const BOOL)generateRefreshToken
                 redirectURL:(NSURL *const)redirectURL
                  completion:(void (^const)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken, NSError *_Nullable))completion; /// PKCE variant (more secure)
 

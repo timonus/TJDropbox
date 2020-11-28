@@ -35,6 +35,7 @@ __attribute__((objc_direct_members))
 
 @property (nonatomic, copy, class) NSString *tj_clientIdentifier;
 @property (nonatomic, copy, class) NSString *tj_codeVerifier;
+@property (nonatomic, class) BOOL tj_generateRefreshToken;
 @property (nonatomic, copy, class) void (^tj_completion)(NSString *accessToken, NSString *refreshToken);
 
 @end
@@ -46,6 +47,7 @@ __attribute__((objc_direct_members))
 
 static NSString *_tj_clientIdentifier;
 static NSString *_tj_codeVerifier;
+static BOOL _tj_generateRefreshToken;
 static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
 
 + (void)setTj_clientIdentifier:(NSString *)tj_clientIdentifier
@@ -56,6 +58,11 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
 + (void)setTj_codeVerifier:(NSString *)tj_codeVerifier
 {
     _tj_codeVerifier = tj_codeVerifier;
+}
+
++ (void)setTj_generateRefreshToken:(BOOL)tj_generateRefreshToken
+{
+    _tj_generateRefreshToken = tj_generateRefreshToken;
 }
 
 + (void)setTj_completion:(void (^)(NSString *, NSString *))tj_completion
@@ -71,6 +78,11 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
 + (NSString *)tj_codeVerifier
 {
     return _tj_codeVerifier;
+}
+
++ (BOOL)tj_generateRefreshToken
+{
+    return _tj_generateRefreshToken;
 }
 
 + (void (^)(NSString *, NSString *))tj_completion
@@ -107,6 +119,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
             if (success) {
                 [self setTj_clientIdentifier:clientIdentifier];
                 [self setTj_codeVerifier:codeVerifier];
+                [self setTj_generateRefreshToken:generateRefreshToken];
                 [self setTj_completion:completion];
             } else {
                 [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
@@ -136,6 +149,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
         [self tryHandleAuthenticationCallbackWithURL:callbackURL
                                     clientIdentifier:clientIdentifier
                                         codeVerifier:codeVerifier
+                                generateRefreshToken:generateRefreshToken
                                           completion:completion];
         // Break reference so session is deallocated.
         session = nil;
@@ -163,6 +177,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
             if (success) {
                 [self setTj_clientIdentifier:clientIdentifier];
                 [self setTj_codeVerifier:codeVerifier];
+                [self setTj_generateRefreshToken:generateRefreshToken];
                 [self setTj_completion:completion];
             } else {
                 completion(nil, nil);
@@ -176,12 +191,14 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
     return [self tryHandleAuthenticationCallbackWithURL:url
                                        clientIdentifier:[self tj_clientIdentifier]
                                            codeVerifier:[self tj_codeVerifier]
+                                   generateRefreshToken:[self tj_generateRefreshToken]
                                              completion:[self tj_completion]];
 }
 
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
                               clientIdentifier:(NSString *const)clientIdentifier
                                   codeVerifier:(NSString *const)codeVerifier
+                          generateRefreshToken:(const BOOL)generateRefreshToken
                                     completion:(void (^)(NSString *accessToken, NSString *refreshToken))completion
 {
     BOOL handledURL = NO;
@@ -218,12 +235,14 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
                         [self tryHandleAuthenticationCallbackWithURL:url
                                                     clientIdentifier:clientIdentifier
                                                         codeVerifier:codeVerifier
+                                                generateRefreshToken:generateRefreshToken
                                                           completion:completion];
                     });
                 } else {
                     [TJDropbox accessTokenFromCode:code
                               withClientIdentifier:clientIdentifier
                                       codeVerifier:codeVerifier
+                              generateRefreshToken:generateRefreshToken
                                        redirectURL:redirectURL
                                         completion:^(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSError * _Nullable error) {
                         dispatch_async(dispatch_get_main_queue(), ^{
@@ -240,6 +259,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
         
         [self setTj_clientIdentifier:nil];
         [self setTj_codeVerifier:nil];
+        [self setTj_generateRefreshToken:NO];
         [self setTj_completion:nil];
         
         handledURL = YES;
