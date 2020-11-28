@@ -222,33 +222,33 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return [NSURL URLWithString:[NSString stringWithFormat:@"db-%@://2/token", clientIdentifier]];
 }
 
-+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
++ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
 {
-    NSString *accessToken = nil;
     if ([url.absoluteString hasPrefix:redirectURL.absoluteString]) {
         NSString *const fragment = url.fragment;
         NSURLComponents *const components = [NSURLComponents new];
         components.query = fragment;
         for (NSURLQueryItem *const item in components.queryItems) {
             if ([item.name isEqualToString:@"access_token"]) {
-                accessToken = item.value;
+                *accessToken = item.value;
                 break;
             }
+            // todo
         }
     }
-    return accessToken;
 }
 
-+ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
+//+ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
++ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
 {
-    return [self accessTokenFromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
+    [self accessToken:accessToken refreshToken:refreshToken fromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
 + (void)accessTokenFromCode:(NSString *const)code
        withClientIdentifier:(NSString *const)clientIdentifier
                codeVerifier:(NSString *const)codeVerifier
                 redirectURL:(NSURL *const)redirectURL
-                 completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
+                 completion:(nonnull void (^const)(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSError * _Nullable))completion
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
     // https://bit.ly/3fKbMd3
@@ -266,7 +266,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
     
     _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
-        completion(parsedResponse[@"access_token"], error);
+        completion(parsedResponse[@"access_token"], parsedResponse[@"refresh_token"], error);
     });
 }
 
@@ -356,21 +356,21 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return components.URL;
 }
 
-+ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url
+//+ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url
++ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromDropboxAppAuthenticationURL:(NSURL *const)url
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L360-L383
     
-    NSString *accessToken = nil;
     if ([url.scheme hasPrefix:@"db-"] && [url.host isEqualToString:@"1"] && [url.path isEqualToString:@"/connect"]) {
         NSURLComponents *const components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
         for (NSURLQueryItem *queryItem in components.queryItems) {
             if ([queryItem.name isEqualToString:@"oauth_token_secret"] && queryItem.value.length > 0) {
-                accessToken = queryItem.value;
+                *accessToken = queryItem.value;
                 break;
+                // todo
             }
         }
     }
-    return accessToken;
 }
 
 + (void)revokeToken:(NSString *const)token withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion

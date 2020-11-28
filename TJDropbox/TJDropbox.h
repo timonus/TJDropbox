@@ -49,14 +49,17 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 + (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier;
 
 /// Used to extract the access token returned from Dropbox OAuth
-+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
-+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
+//+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
++ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
+//+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
++ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
+
 
 + (void)accessTokenFromCode:(NSString *const)code
        withClientIdentifier:(NSString *const)clientIdentifier
                codeVerifier:(NSString *const)codeVerifier
                 redirectURL:(NSURL *const)redirectURL
-                 completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion; /// PKCE variant (more secure)
+                 completion:(void (^const)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken, NSError *_Nullable))completion; /// PKCE variant (more secure)
 
 + (void)accessTokenFromRefreshToken:(NSString *const)refreshToken
                withClientIdentifier:(NSString *const)clientIdentifier
@@ -72,7 +75,7 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
                                       generateRefreshToken:(const BOOL)generateRefreshToken;
 
 /// Used to extract the access token from Dropbox app authentication
-+ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url;
++ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromDropboxAppAuthenticationURL:(NSURL *const)url;
 
 /// Revokes an access token.
 + (void)revokeToken:(NSString *const)token withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion;

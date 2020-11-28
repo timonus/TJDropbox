@@ -35,7 +35,7 @@ __attribute__((objc_direct_members))
 
 @property (nonatomic, copy, class) NSString *tj_clientIdentifier;
 @property (nonatomic, copy, class) NSString *tj_codeVerifier;
-@property (nonatomic, copy, class) void (^tj_completion)(NSString *accessToken);
+@property (nonatomic, copy, class) void (^tj_completion)(NSString *accessToken, NSString *refreshToken);
 
 @end
 
@@ -46,7 +46,7 @@ __attribute__((objc_direct_members))
 
 static NSString *_tj_clientIdentifier;
 static NSString *_tj_codeVerifier;
-static void (^_tj_completion)(NSString *accessToken);
+static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
 
 + (void)setTj_clientIdentifier:(NSString *)tj_clientIdentifier
 {
@@ -58,7 +58,7 @@ static void (^_tj_completion)(NSString *accessToken);
     _tj_codeVerifier = tj_codeVerifier;
 }
 
-+ (void)setTj_completion:(void (^)(NSString *))tj_completion
++ (void)setTj_completion:(void (^)(NSString *, NSString *))tj_completion
 {
     _tj_completion = tj_completion;
 }
@@ -73,7 +73,7 @@ static void (^_tj_completion)(NSString *accessToken);
     return _tj_codeVerifier;
 }
 
-+ (void (^)(NSString *))tj_completion
++ (void (^)(NSString *, NSString *))tj_completion
 {
     return _tj_completion;
 }
@@ -82,12 +82,12 @@ static void (^_tj_completion)(NSString *accessToken);
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
                            bypassingPKCE:(const BOOL)bypassingPKCE
                     generateRefreshToken:(const BOOL)generateRefreshToken
-                              completion:(void (^)(NSString *_Nullable accessToken))completion
+                              completion:(void (^)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     if (![[[[NSBundle mainBundle] infoDictionary] valueForKeyPath:@"CFBundleURLTypes.CFBundleURLSchemes.@unionOfArrays.self"] containsObject:redirectURLScheme]) { // https://forums.developer.apple.com/thread/31307
         NSAssert(NO, @"You must add the \"%@\" scheme to your info.plist's \"CFBundleURLTypes\"", redirectURLScheme);
-        completion(nil);
+        completion(nil, nil);
         return;
     }
     
@@ -121,7 +121,7 @@ static void (^_tj_completion)(NSString *accessToken);
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
                                        codeVerifier:(NSString *const)codeVerifier
                                generateRefreshToken:(const BOOL)generateRefreshToken
-                                         completion:(void (^)(NSString *))completion
+                                         completion:(void (^)(NSString *, NSString *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
                                                                  redirectURL:nil
@@ -165,7 +165,7 @@ static void (^_tj_completion)(NSString *accessToken);
                 [self setTj_codeVerifier:codeVerifier];
                 [self setTj_completion:completion];
             } else {
-                completion(nil);
+                completion(nil, nil);
             }
         }];
     }
@@ -182,7 +182,7 @@ static void (^_tj_completion)(NSString *accessToken);
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
                               clientIdentifier:(NSString *const)clientIdentifier
                                   codeVerifier:(NSString *const)codeVerifier
-                                    completion:(void (^)(NSString *))completion
+                                    completion:(void (^)(NSString *accessToken, NSString *refreshToken))completion
 {
     BOOL handledURL = NO;
     NSURL *const redirectURL = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier];
@@ -200,7 +200,12 @@ static void (^_tj_completion)(NSString *accessToken);
                 break;
             }
         }
-        NSString *const token = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url] ?: [TJDropbox accessTokenFromURL:url withClientIdentifier:clientIdentifier];
+        NSString *token = nil;
+        NSString *refreshToken = nil;
+        [TJDropbox accessToken:&token refreshToken:&refreshToken fromDropboxAppAuthenticationURL:url];
+        if (!token) {
+            [TJDropbox accessToken:&token refreshToken:&refreshToken fromURL:url withClientIdentifier:clientIdentifier];
+        }
         if (codeIsAccessToken) {
             code = token;
         }
@@ -220,17 +225,17 @@ static void (^_tj_completion)(NSString *accessToken);
                               withClientIdentifier:clientIdentifier
                                       codeVerifier:codeVerifier
                                        redirectURL:redirectURL
-                                        completion:^(NSString * _Nullable accessToken, NSError * _Nullable error) {
+                                        completion:^(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSError * _Nullable error) {
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            completion(accessToken);
+                            completion(accessToken, refreshToken);
                         });
                     }];
                 }
             } else {
-                completion(nil);
+                completion(nil, nil);
             }
         } else {
-            completion(token);
+            completion(token, refreshToken);
         }
         
         [self setTj_clientIdentifier:nil];
