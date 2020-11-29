@@ -266,10 +266,10 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                                                           [NSURLQueryItem queryItemWithName:@"code_verifier" value:codeVerifier],
                                                           [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
                                                           nil];
-    if (generateRefreshToken) {
-        // TODO: THIS DOESN'T WORK!
-        [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
-    }
+//    if (generateRefreshToken) {
+//        // TODO: THIS DOESN'T WORK!
+//        [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
+//    }
     components.queryItems = queryItems;
     request.HTTPBody = [components.query dataUsingEncoding:NSUTF8StringEncoding];
     [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
