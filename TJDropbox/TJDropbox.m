@@ -222,7 +222,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return [NSURL URLWithString:[NSString stringWithFormat:@"db-%@://2/token", clientIdentifier]];
 }
 
-+ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
++ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken expirationDate:(NSDate *_Nullable*_Nullable)expirationDate fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
 {
     if ([url.absoluteString hasPrefix:redirectURL.absoluteString]) {
         NSString *const fragment = url.fragment;
@@ -242,9 +242,9 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     }
 }
 
-+ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
++ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken expirationDate:(NSDate *_Nullable*_Nullable)expirationDate fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
 {
-    [self accessToken:accessToken refreshToken:refreshToken fromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
+    [self accessToken:accessToken refreshToken:refreshToken expirationDate:expirationDate fromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
 + (void)accessTokenFromCode:(NSString *const)code
@@ -252,7 +252,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                codeVerifier:(NSString *const)codeVerifier
        generateRefreshToken:(const BOOL)generateRefreshToken
                 redirectURL:(NSURL *const)redirectURL
-                 completion:(nonnull void (^const)(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSError * _Nullable))completion
+                 completion:(nonnull void (^const)(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSDate *_Nullable expirationDate, NSError * _Nullable))completion
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
     // https://bit.ly/3fKbMd3
@@ -275,13 +275,20 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
     
     _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
-        completion(parsedResponse[@"access_token"], parsedResponse[@"refresh_token"], error);
+        NSDate *expirationDate;
+        id expiresInValue = parsedResponse[@"expires_in"];
+        if (expiresInValue) {
+            expirationDate = [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]];
+        } else {
+            expirationDate = nil;
+        }
+        completion(parsedResponse[@"access_token"], parsedResponse[@"refresh_token"], expirationDate, error);
     });
 }
 
 + (void)accessTokenFromRefreshToken:(NSString *const)refreshToken
                withClientIdentifier:(NSString *const)clientIdentifier
-                         completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
+                         completion:(void (^const)(NSString *_Nullable, NSDate *_Nullable, NSError *_Nullable))completion
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
     // https://bit.ly/3fKbMd3
@@ -297,7 +304,14 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
     
     _performAPIRequest(request, ^(NSDictionary *parsedResponse, NSError *error) {
-        completion(parsedResponse[@"access_token"], error);
+        NSDate *expirationDate;
+        id expiresInValue = parsedResponse[@"expires_in"];
+        if (expiresInValue) {
+            expirationDate = [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]];
+        } else {
+            expirationDate = nil;
+        }
+        completion(parsedResponse[@"access_token"], expirationDate, error);
     });
 }
 
@@ -366,7 +380,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return components.URL;
 }
 
-+ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken fromDropboxAppAuthenticationURL:(NSURL *const)url
++ (void)accessToken:(NSString * _Nullable __autoreleasing *)accessToken refreshToken:(NSString * _Nullable __autoreleasing *)refreshToken expirationDate:(NSDate *_Nullable*_Nullable)expirationDate fromDropboxAppAuthenticationURL:(NSURL *const)url
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L360-L383
     

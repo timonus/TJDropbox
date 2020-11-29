@@ -36,7 +36,7 @@ __attribute__((objc_direct_members))
 @property (nonatomic, copy, class) NSString *tj_clientIdentifier;
 @property (nonatomic, copy, class) NSString *tj_codeVerifier;
 @property (nonatomic, class) BOOL tj_generateRefreshToken;
-@property (nonatomic, copy, class) void (^tj_completion)(NSString *accessToken, NSString *refreshToken);
+@property (nonatomic, copy, class) void (^tj_completion)(NSString *accessToken, NSString *refreshToken, NSDate *expirationDate);
 
 @end
 
@@ -48,7 +48,7 @@ __attribute__((objc_direct_members))
 static NSString *_tj_clientIdentifier;
 static NSString *_tj_codeVerifier;
 static BOOL _tj_generateRefreshToken;
-static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
+static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken, NSDate *expirationDate);
 
 + (void)setTj_clientIdentifier:(NSString *)tj_clientIdentifier
 {
@@ -65,7 +65,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
     _tj_generateRefreshToken = tj_generateRefreshToken;
 }
 
-+ (void)setTj_completion:(void (^)(NSString *, NSString *))tj_completion
++ (void)setTj_completion:(void (^)(NSString *, NSString *, NSDate *))tj_completion
 {
     _tj_completion = tj_completion;
 }
@@ -85,7 +85,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
     return _tj_generateRefreshToken;
 }
 
-+ (void (^)(NSString *, NSString *))tj_completion
++ (void (^)(NSString *, NSString *, NSDate *))tj_completion
 {
     return _tj_completion;
 }
@@ -94,12 +94,12 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
                            bypassingPKCE:(const BOOL)bypassingPKCE
                     generateRefreshToken:(const BOOL)generateRefreshToken
-                              completion:(void (^)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken))completion
+                              completion:(void (^)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken, NSDate *_Nullable expirationDate))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     if (![[[[NSBundle mainBundle] infoDictionary] valueForKeyPath:@"CFBundleURLTypes.CFBundleURLSchemes.@unionOfArrays.self"] containsObject:redirectURLScheme]) { // https://forums.developer.apple.com/thread/31307
         NSAssert(NO, @"You must add the \"%@\" scheme to your info.plist's \"CFBundleURLTypes\"", redirectURLScheme);
-        completion(nil, nil);
+        completion(nil, nil, nil);
         return;
     }
     
@@ -134,7 +134,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
                                        codeVerifier:(NSString *const)codeVerifier
                                generateRefreshToken:(const BOOL)generateRefreshToken
-                                         completion:(void (^)(NSString *, NSString *))completion
+                                         completion:(void (^)(NSString *, NSString *, NSDate *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
                                                                  redirectURL:nil
@@ -180,7 +180,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
                 [self setTj_generateRefreshToken:generateRefreshToken];
                 [self setTj_completion:completion];
             } else {
-                completion(nil, nil);
+                completion(nil, nil, nil);
             }
         }];
     }
@@ -199,7 +199,7 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
                               clientIdentifier:(NSString *const)clientIdentifier
                                   codeVerifier:(NSString *const)codeVerifier
                           generateRefreshToken:(const BOOL)generateRefreshToken
-                                    completion:(void (^)(NSString *accessToken, NSString *refreshToken))completion
+                                    completion:(void (^)(NSString *accessToken, NSString *refreshToken, NSDate *_Nullable expirationDate))completion
 {
     BOOL handledURL = NO;
     NSURL *const redirectURL = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier];
@@ -219,9 +219,10 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
         }
         NSString *token = nil;
         NSString *refreshToken = nil;
-        [TJDropbox accessToken:&token refreshToken:&refreshToken fromDropboxAppAuthenticationURL:url];
+        NSDate *expirationDate = nil;
+        [TJDropbox accessToken:&token refreshToken:&refreshToken expirationDate:&expirationDate fromDropboxAppAuthenticationURL:url];
         if (!token) {
-            [TJDropbox accessToken:&token refreshToken:&refreshToken fromURL:url withClientIdentifier:clientIdentifier];
+            [TJDropbox accessToken:&token refreshToken:&refreshToken expirationDate:&expirationDate fromURL:url withClientIdentifier:clientIdentifier];
         }
         if (codeIsAccessToken) {
             code = token;
@@ -244,17 +245,17 @@ static void (^_tj_completion)(NSString *accessToken, NSString *refreshToken);
                                       codeVerifier:codeVerifier
                               generateRefreshToken:generateRefreshToken
                                        redirectURL:redirectURL
-                                        completion:^(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSError * _Nullable error) {
+                                        completion:^(NSString * _Nullable accessToken, NSString * _Nullable refreshToken, NSDate *_Nullable expirationDate, NSError * _Nullable error) {
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            completion(accessToken, refreshToken);
+                            completion(accessToken, refreshToken, expirationDate);
                         });
                     }];
                 }
             } else {
-                completion(nil, nil);
+                completion(nil, nil, nil);
             }
         } else {
-            completion(token, refreshToken);
+            completion(token, refreshToken, expirationDate);
         }
         
         [self setTj_clientIdentifier:nil];

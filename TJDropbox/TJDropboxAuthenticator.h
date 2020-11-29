@@ -21,7 +21,7 @@ API_AVAILABLE(ios(10.0)) @interface TJDropboxAuthenticator : NSObject
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
                            bypassingPKCE:(const BOOL)bypassingPKCE
                     generateRefreshToken:(const BOOL)generateRefreshToken
-                              completion:(void (^)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken))completion;
+                              completion:(void (^)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken, NSDate *_Nullable expirationDate))completion;
 
 /// Invoke this from your app delegate's implementation of -application:openURL:options:, returns whether or not the URL was a completion callback to Dropbox auth.
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url;

@@ -49,8 +49,8 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 + (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier;
 
 /// Used to extract the access token returned from Dropbox OAuth
-+ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
-+ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
++ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken expirationDate:(NSDate *_Nullable*_Nullable)expirationDate fromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
++ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken expirationDate:(NSDate *_Nullable*_Nullable)expirationDate fromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
 
 
 + (void)accessTokenFromCode:(NSString *const)code
@@ -58,11 +58,11 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
                codeVerifier:(NSString *const)codeVerifier
        generateRefreshToken:(const BOOL)generateRefreshToken
                 redirectURL:(NSURL *const)redirectURL
-                 completion:(void (^const)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken, NSError *_Nullable))completion; /// PKCE variant (more secure)
+                 completion:(void (^const)(NSString *_Nullable accessToken, NSString *_Nullable refreshToken, NSDate *_Nullable expirationDate, NSError *_Nullable))completion; /// PKCE variant (more secure)
 
 + (void)accessTokenFromRefreshToken:(NSString *const)refreshToken
                withClientIdentifier:(NSString *const)clientIdentifier
-                         completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion;
+                         completion:(void (^const)(NSString *_Nullable accessToken, NSDate *_Nullable expirationDate, NSError *_Nullable))completion;
 
 /// Check if there was an authentication error (also happens when the user presses cancel on the website)
 + (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
@@ -74,7 +74,7 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
                                       generateRefreshToken:(const BOOL)generateRefreshToken;
 
 /// Used to extract the access token from Dropbox app authentication
-+ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken fromDropboxAppAuthenticationURL:(NSURL *const)url;
++ (void)accessToken:(NSString *_Nullable*_Nullable)accessToken refreshToken:(NSString *_Nullable*_Nullable)refreshToken expirationDate:(NSDate *_Nullable*_Nullable)expirationDate fromDropboxAppAuthenticationURL:(NSURL *const)url;
 
 /// Revokes an access token.
 + (void)revokeToken:(NSString *const)token withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion;
