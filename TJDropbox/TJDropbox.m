@@ -1054,4 +1054,17 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
     return isInvalidAccessTokenError;
 }
 
+- (BOOL)tj_isInsufficientSpaceError
+{
+    BOOL isInsufficientSpaceError = NO;
+    if ([self.domain isEqualToString:TJDropboxErrorDomain]) {
+        NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
+        NSString *const tag = dropboxErrorDictionary[@"reason"][@".tag"];
+        if ([tag isEqualToString:@"insufficient_space"]) {
+            isInsufficientSpaceError = YES;
+        }
+    }
+    return isInsufficientSpaceError;
+}
+
 @end
