@@ -596,6 +596,9 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             [parameters setObject:@YES forKey:@"include_deleted"];
         }
     }
+    if (!cursor) {
+        [parameters setObject:@(2000) forKey:@"limit"];
+    }
     return _apiRequest(urlPath, accessToken, parameters);
 }
 
