@@ -413,6 +413,12 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
         [request addValue:authorization forHTTPHeaderField:@"Authorization"];
     }
     
+#if defined(__IPHONE_15_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_15_0
+    if (@available(iOS 15.0, *)) {
+        request.attribution = NSURLRequestAttributionUser;
+    }
+#endif
+    
     return request;
 }
 
