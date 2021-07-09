@@ -1040,8 +1040,8 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
     if ([self.domain isEqualToString:TJDropboxErrorDomain]) {
         NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
         NSString *const tag = dropboxErrorDictionary[@".tag"];
-        if ([tag isEqualToString:@"path"]) {
-            NSString *const pathTag = dropboxErrorDictionary[@"path"][@".tag"];
+        if ([tag isEqualToString:@"path"] || [tag isEqualToString:@"path_lookup"]) {
+            NSString *const pathTag = dropboxErrorDictionary[tag][@".tag"];
             if ([pathTag isEqualToString:@"not_found"]) {
                 isPathNotFoundError = YES;
             }
