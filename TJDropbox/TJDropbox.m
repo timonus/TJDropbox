@@ -14,9 +14,20 @@ NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
 NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
+NSString *const TJDropboxCredentialDidRefreshAccessTokenNotification = @"TJDropboxCredentialDidRefreshAccessTokenNotification";
+
+#if defined(__has_attribute) && __has_attribute(objc_direct_members)
+__attribute__((objc_direct_members))
+#endif
 @interface TJDropboxCredential ()
 
 @property (nonatomic, copy, readwrite) NSString *accessToken;
+
+@property (nonatomic, copy, readwrite) NSString *refreshToken;
+@property (nonatomic, strong, readwrite) NSDate *expirationDate;
+@property (nonatomic, copy, readwrite) NSString *clientIdentifier;
+
+@property (nonatomic) NSMutableArray<void (^)(NSDictionary *, NSError *)> *refreshCompletionBlocks;
 
 @end
 
@@ -28,6 +39,81 @@ NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
         self.accessToken = accessToken;
     }
     return self;
+}
+
+- (instancetype)initWithAccessToken:(NSString *const)accessToken
+                       refreshToken:(NSString *const)refreshToken
+                     expirationDate:(NSDate *const)expirationDate
+                   clientIdentifier:(NSString *const)clientIdentifier
+{
+    if (self = [self initWithAccessToken:accessToken]) {
+        if (refreshToken && expirationDate && clientIdentifier) {
+            self.refreshToken = refreshToken;
+            self.expirationDate = expirationDate;
+            self.clientIdentifier = clientIdentifier;
+        }
+    }
+    return self;
+}
+
+/// Similar to the public initializer but params are nullable
+- (instancetype)initPrivateWithAccessToken:(NSString *const)accessToken
+                              refreshToken:(NSString *const)refreshToken
+                            expirationDate:(NSDate *const)expirationDate
+                          clientIdentifier:(NSString *const)clientIdentifier
+{
+    if (accessToken) {
+        if (refreshToken && expirationDate && clientIdentifier) {
+            return [self initWithAccessToken:accessToken
+                                refreshToken:refreshToken
+                              expirationDate:expirationDate
+                            clientIdentifier:clientIdentifier];
+        } else {
+            return [self initWithAccessToken:accessToken];
+        }
+    }
+    return nil;
+}
+
+- (instancetype)initWithSerializedStringValue:(NSString *)serializedStringValue
+                             clientIdentifier:(nonnull NSString *)clientIdentifier
+{
+    NSArray<NSString *> *const serializedStringValueComponents = [serializedStringValue componentsSeparatedByString:@"\n"];
+    NSString *const accessToken = serializedStringValueComponents[0];
+    NSString *refreshToken = nil;
+    NSDate *expirationDate = nil;
+    if (serializedStringValueComponents.count == 3) {
+        refreshToken = serializedStringValueComponents[1];
+        expirationDate = [NSDate dateWithTimeIntervalSinceReferenceDate:[serializedStringValueComponents[2] doubleValue]];
+    }
+    return [self initPrivateWithAccessToken:accessToken
+                               refreshToken:refreshToken
+                             expirationDate:expirationDate
+                           clientIdentifier:clientIdentifier];
+}
+
+- (NSString *)serializedStringValue
+{
+    @synchronized (self) {
+        NSString *serializedStringValue = self.accessToken;
+        if (self.refreshToken && self.expirationDate) {
+            serializedStringValue = [serializedStringValue stringByAppendingFormat:@"\n%@\n%@", self.refreshToken, @([self.expirationDate timeIntervalSinceReferenceDate])];
+        }
+        return serializedStringValue;
+    }
+}
+
+- (BOOL)isEqual:(id)object {
+    if ([object isKindOfClass:[TJDropboxCredential class]]) {
+        // Two credentials are considered equal if:
+        // 1. They have the same refresh token
+        // 2. They have no refresh tokens but the same access token
+        return [[(TJDropboxCredential *)object refreshToken] isEqual:self.refreshToken] ||
+        ([(TJDropboxCredential *)object refreshToken] == nil &&
+         self.refreshToken == nil &&
+         [[(TJDropboxCredential *)object accessToken] isEqual:self.accessToken]);
+    }
+    return object;
 }
 
 @end
@@ -208,6 +294,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                           redirectURL:(nullable NSURL *)redirectURL
                                          codeVerifier:(nullable NSString *const)codeVerifier
+                                 generateRefreshToken:(const BOOL)generateRefreshToken
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#auth
     
@@ -217,16 +304,20 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     NSString *const codeChallenge = codeVerifier ? _codeChallengeFromCodeVerifier(codeVerifier) : nil;
     
     NSURLComponents *const components = [NSURLComponents componentsWithURL:[NSURL URLWithString:@"https://www.dropbox.com/oauth2/authorize"] resolvingAgainstBaseURL:NO];
-    components.queryItems = [NSArray arrayWithObjects:
-                             [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
-                             [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
-                             [NSURLQueryItem queryItemWithName:@"response_type" value:codeChallenge ? @"code" : @"token"],
-                             [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
-                             // Following params only apply if verifier is supplied
-                             codeChallenge ? [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge] : nil,
-                             [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
-                             nil
-                             ];
+    NSMutableArray<NSURLQueryItem *> *const queryItems = [NSMutableArray arrayWithObjects:
+                                                          [NSURLQueryItem queryItemWithName:@"client_id" value:clientIdentifier],
+                                                          [NSURLQueryItem queryItemWithName:@"redirect_uri" value:redirectURL.absoluteString],
+                                                          [NSURLQueryItem queryItemWithName:@"response_type" value:codeChallenge ? @"code" : @"token"],
+                                                          [NSURLQueryItem queryItemWithName:@"disable_signup" value:@"true"],
+                                                          // Following params only apply if verifier is supplied
+                                                          codeChallenge ? [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge] : nil,
+                                                          [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
+                                                          nil
+                                                          ];
+    if (generateRefreshToken) {
+        [queryItems addObject:[NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"]]; // https://dropbox.tech/developers/migrating-app-permissions-and-access-tokens#updating-access-token-type
+    }
+    components.queryItems = queryItems;
     return components.URL;
 }
 
@@ -235,33 +326,33 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return [NSURL URLWithString:[NSString stringWithFormat:@"db-%@://2/token", clientIdentifier]];
 }
 
-+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
++ (nullable TJDropboxCredential *)credentialFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL
 {
-    NSString *accessToken = nil;
+    TJDropboxCredential *credential = nil;
     if ([url.absoluteString hasPrefix:redirectURL.absoluteString]) {
         NSString *const fragment = url.fragment;
         NSURLComponents *const components = [NSURLComponents new];
         components.query = fragment;
         for (NSURLQueryItem *const item in components.queryItems) {
             if ([item.name isEqualToString:@"access_token"]) {
-                accessToken = item.value;
+                credential = [[TJDropboxCredential alloc] initWithAccessToken:item.value];
                 break;
             }
         }
     }
-    return accessToken;
+    return credential;
 }
 
-+ (NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
++ (nullable TJDropboxCredential *)credentialFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier
 {
-    return [self accessTokenFromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
+    return [self credentialFromURL:url withRedirectURL:[self defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier]];
 }
 
-+ (void)accessTokenFromCode:(NSString *const)code
-       withClientIdentifier:(NSString *const)clientIdentifier
-               codeVerifier:(NSString *const)codeVerifier
-                redirectURL:(NSURL *const)redirectURL
-                 completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion
++ (void)credentialFromCode:(NSString *const)code
+      withClientIdentifier:(NSString *const)clientIdentifier
+              codeVerifier:(NSString *const)codeVerifier
+               redirectURL:(NSURL *const)redirectURL
+                completion:(void (^const)(TJDropboxCredential *_Nullable, NSError *_Nullable))completion
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
     // https://bit.ly/3fKbMd3
@@ -282,7 +373,15 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
         return request;
     },
                        ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
-        completion(parsedResponse[@"access_token"], error);
+        NSString *const accessToken = parsedResponse[@"access_token"];
+        NSString *const refreshToken = parsedResponse[@"refresh_token"];
+        const id expiresInValue = parsedResponse[@"expires_in"];
+        NSDate *const expirationDate = expiresInValue ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
+        completion([[TJDropboxCredential alloc] initPrivateWithAccessToken:accessToken
+                                                              refreshToken:refreshToken
+                                                            expirationDate:expirationDate
+                                                          clientIdentifier:clientIdentifier],
+                   error);
     });
 }
 
@@ -345,7 +444,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     return components.URL;
 }
 
-+ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url
++ (nullable TJDropboxCredential *)credentialFromDropboxAppAuthenticationURL:(NSURL *const)url
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L360-L383
     
@@ -357,9 +456,10 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                 accessToken = queryItem.value;
                 break;
             }
+            // TODO: DO OTHER FIELDS WORK HERE?
         }
     }
-    return accessToken;
+    return accessToken ? [[TJDropboxCredential alloc] initWithAccessToken:accessToken] : nil;
 }
 
 + (void)revokeCredential:(TJDropboxCredential *const)credential withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion
@@ -504,24 +604,90 @@ static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *>
 }
 
 static void _addTask(TJDropboxCredential *credential,
-                     NSURLSessionTask *(^taskBlock)(void)) // TODO: Credential error block param
+                     NSURLSessionTask *(^taskBlock)(void),
+                     void (^const refreshErrorCompletion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
-    // TODO: Validate that credential expiration.
-    NSURLSessionTask *task = taskBlock();
-    _performBlockWithTasks(^(NSHashTable<NSURLSessionTask *> *tasks) {
-        [tasks addObject:task];
-    });
-    [task resume];
+    dispatch_block_t performTaskBlock = ^{
+        NSURLSessionTask *task = taskBlock();
+        _performBlockWithTasks(^(NSHashTable<NSURLSessionTask *> *tasks) {
+            [tasks addObject:task];
+        });
+        [task resume];
+    };
+    if (credential) {
+        @synchronized (credential) {
+            if (credential.expirationDate.timeIntervalSinceNow < 600.0) { // Refresh if there are fewer than 10 minutes until expiration
+                void (^refreshCompletionBlock)(NSDictionary *, NSError *) = ^(NSDictionary *parsedResponse, NSError *error) {
+                    credential.refreshCompletionBlocks = nil;
+                    credential.refreshCompletionBlocks = nil;
+                    if (error) {
+                        refreshErrorCompletion(parsedResponse, error);
+                    } else {
+                        performTaskBlock();
+                    }
+                };
+                if (credential.refreshCompletionBlocks) {
+                    [credential.refreshCompletionBlocks addObject:refreshErrorCompletion];
+                } else {
+                    credential.refreshCompletionBlocks = [NSMutableArray arrayWithObject:refreshCompletionBlock];
+                    _refreshCredential(credential, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+                        for (void (^block)(NSDictionary *, NSError *) in credential.refreshCompletionBlocks) {
+                            block(parsedResponse, error);
+                        }
+                    });
+                }
+                return;
+            }
+        }
+    }
+    
+    performTaskBlock();
 }
 
 static void _performAPIRequest(TJDropboxCredential *credential, NSURLRequest *(^requestBlock)(void), void (^const completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         return [_session() dataTaskWithRequest:requestBlock() completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
             NSDictionary *parsedResult = nil;
             _processResult(data, response, &error, &parsedResult);
             completion(parsedResult, error);
         }];
+    },
+             completion);
+}
+
+static void _refreshCredential(TJDropboxCredential *const credential, void (^completion)(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error))
+{
+    _performAPIRequest(nil,
+                       ^NSURLRequest *{
+        // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
+        // https://bit.ly/3fKbMd3
+        NSMutableURLRequest *const request = _apiRequest(@"/oauth2/token", nil, nil);
+        NSURLComponents *const components = [NSURLComponents new];
+        components.queryItems = @[
+            [NSURLQueryItem queryItemWithName:@"grant_type" value:@"refresh_token"],
+            [NSURLQueryItem queryItemWithName:@"refresh_token" value:credential.refreshToken],
+            [NSURLQueryItem queryItemWithName:@"client_id" value:credential.clientIdentifier],
+        ];
+        request.HTTPBody = [components.query dataUsingEncoding:NSUTF8StringEncoding];
+        [request addValue:@"application/x-www-form-urlencoded; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+        return request;
+    },
+                       ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+        
+        NSString *const accessToken = parsedResponse[@"access_token"];
+        const id expiresInValue = parsedResponse[@"expires_in"];
+        NSDate *const expirationDate = expiresInValue ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
+        if (accessToken && expirationDate) {
+            @synchronized (credential) {
+                credential.accessToken = accessToken;
+                credential.expirationDate = expirationDate;
+            }
+            [[NSNotificationCenter defaultCenter] postNotificationName:TJDropboxCredentialDidRefreshAccessTokenNotification
+                                                                object:credential];
+        }
+        completion(parsedResponse, error);
     });
 }
 
@@ -689,7 +855,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
 
 + (void)downloadFileAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath credential:(TJDropboxCredential *const)credential progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         NSURLRequest *const request = [self requestToDownloadFileAtPath:remotePath credential:credential];
         
         NSURLSessionDownloadTask *const task = [_session() downloadTaskWithRequest:request];
@@ -717,7 +884,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         }
                           forDownloadTask:task];
         return task;
-    });
+    },
+             completion);
 }
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath credential:(TJDropboxCredential *const)credential completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -727,7 +895,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications credential:(TJDropboxCredential *const)credential progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         NSMutableDictionary<NSString *, id> *const parameters = [NSMutableDictionary new];
         parameters[@"path"] = _asciiEncodeString(remotePath);
         if (overwriteExisting) {
@@ -749,7 +918,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         }
                               forDataTask:task];
         return task;
-    });
+    },
+             completion);
 }
 
 + (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath credential:(TJDropboxCredential *const)credential completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -759,7 +929,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
 
 + (void)uploadLargeFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications credential:(TJDropboxCredential *const)credential progressBlock:(void (^const _Nullable)(CGFloat))progressBlock completion:(nonnull void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload_session/start", credential.accessToken, nil);
         [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
         
@@ -781,12 +952,14 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         }];
         
         return task;
-    });
+    },
+             completion);
 }
 
 static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long fileSize, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, TJDropboxCredential *credential, void (^progressBlock)(CGFloat progress), void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         const unsigned long long offset = fileHandle.offsetInFile;
         static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
         NSData *const chunk = [fileHandle readDataOfLength:kChunkSize];
@@ -833,12 +1006,14 @@ static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long file
         }
                               forDataTask:task];
         return task;
-    });
+    },
+             completion);
 }
 
 static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, TJDropboxCredential *const credential, void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         NSNumber *const offset = @(fileHandle.offsetInFile);
         
         NSMutableDictionary *const commit = [NSMutableDictionary new];
@@ -865,7 +1040,8 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
             completion(parsedResult, error);
         }];
         return task;
-    });
+    },
+             completion);
 }
 
 + (void)createFolderAtPath:(NSString *const)path credential:(TJDropboxCredential *const)credential completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
@@ -948,7 +1124,8 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
 
 + (void)downloadThumbnailAtPath:(NSString *const)remotePath toPath:(NSString *const)localPath size:(const TJDropboxThumbnailSize)thumbnailSize credential:(TJDropboxCredential *const)credential completion:(void (^const)(NSDictionary * _Nullable, NSError * _Nullable))completion
 {
-    _addTask(credential, ^NSURLSessionTask *{
+    _addTask(credential,
+             ^NSURLSessionTask *{
         NSURLRequest *const request = [self requestToDownloadThumbnailAtPath:remotePath size:thumbnailSize credential:credential];
         
         NSURLSessionDownloadTask *const task = [_session() downloadTaskWithRequest:request];
@@ -976,7 +1153,8 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
         }
                           forDownloadTask:task];
         return task;
-    });
+    },
+             completion);
 }
 
 #pragma mark - Search

@@ -35,7 +35,7 @@ __attribute__((objc_direct_members))
 
 @property (nonatomic, copy, class) NSString *tj_clientIdentifier;
 @property (nonatomic, copy, class) NSString *tj_codeVerifier;
-@property (nonatomic, copy, class) void (^tj_completion)(NSString *accessToken);
+@property (nonatomic, copy, class) void (^tj_completion)(TJDropboxCredential *);
 
 @end
 
@@ -46,7 +46,7 @@ __attribute__((objc_direct_members))
 
 static NSString *_tj_clientIdentifier;
 static NSString *_tj_codeVerifier;
-static void (^_tj_completion)(NSString *accessToken);
+static void (^_tj_completion)(TJDropboxCredential *);
 
 + (void)setTj_clientIdentifier:(NSString *)tj_clientIdentifier
 {
@@ -58,7 +58,7 @@ static void (^_tj_completion)(NSString *accessToken);
     _tj_codeVerifier = tj_codeVerifier;
 }
 
-+ (void)setTj_completion:(void (^)(NSString *))tj_completion
++ (void)setTj_completion:(void (^)(TJDropboxCredential *))tj_completion
 {
     _tj_completion = tj_completion;
 }
@@ -73,7 +73,7 @@ static void (^_tj_completion)(NSString *accessToken);
     return _tj_codeVerifier;
 }
 
-+ (void (^)(NSString *))tj_completion
++ (void (^)(TJDropboxCredential *))tj_completion
 {
     return _tj_completion;
 }
@@ -81,7 +81,8 @@ static void (^_tj_completion)(NSString *accessToken);
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                      bypassingNativeAuth:(const BOOL)bypassNativeAuth
                            bypassingPKCE:(const BOOL)bypassingPKCE
-                              completion:(void (^)(NSString *_Nullable accessToken))completion
+                    generateRefreshToken:(const BOOL)generateRefreshToken
+                              completion:(void (^)(TJDropboxCredential *_Nullable))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     if (![[[[NSBundle mainBundle] infoDictionary] valueForKeyPath:@"CFBundleURLTypes.CFBundleURLSchemes.@unionOfArrays.self"] containsObject:redirectURLScheme]) { // https://forums.developer.apple.com/thread/31307
@@ -94,6 +95,7 @@ static void (^_tj_completion)(NSString *accessToken);
     if (bypassNativeAuth) {
         [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                              codeVerifier:codeVerifier
+                                     generateRefreshToken:generateRefreshToken
                                                completion:completion];
     } else {
         NSURL *const tokenAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier
@@ -108,6 +110,7 @@ static void (^_tj_completion)(NSString *accessToken);
             } else {
                 [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                                      codeVerifier:codeVerifier
+                                             generateRefreshToken:generateRefreshToken
                                                        completion:completion];
             }
         }];
@@ -116,11 +119,13 @@ static void (^_tj_completion)(NSString *accessToken);
 
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
                                        codeVerifier:(NSString *const)codeVerifier
-                                         completion:(void (^)(NSString *))completion
+                               generateRefreshToken:(const BOOL)generateRefreshToken
+                                         completion:(void (^)(TJDropboxCredential *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
                                                                  redirectURL:nil
-                                                                codeVerifier:codeVerifier];
+                                                                codeVerifier:codeVerifier
+                                                        generateRefreshToken:generateRefreshToken];
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
     
     // Reference needs to be held as long as this is in progress, otherwise the UI disappears.
@@ -176,7 +181,7 @@ static void (^_tj_completion)(NSString *accessToken);
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
                               clientIdentifier:(NSString *const)clientIdentifier
                                   codeVerifier:(NSString *const)codeVerifier
-                                    completion:(void (^)(NSString *))completion
+                                    completion:(void (^)(TJDropboxCredential *))completion
 {
     BOOL handledURL = NO;
     NSURL *const redirectURL = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier];
@@ -194,9 +199,9 @@ static void (^_tj_completion)(NSString *accessToken);
                 break;
             }
         }
-        NSString *const token = [TJDropbox accessTokenFromDropboxAppAuthenticationURL:url] ?: [TJDropbox accessTokenFromURL:url withClientIdentifier:clientIdentifier];
+        TJDropboxCredential *const credential = [TJDropbox credentialFromDropboxAppAuthenticationURL:url] ?: [TJDropbox credentialFromURL:url withClientIdentifier:clientIdentifier];
         if (codeIsAccessToken) {
-            code = token;
+            code = credential.accessToken;
         }
         if (code) {
             if (codeVerifier) {
@@ -210,13 +215,13 @@ static void (^_tj_completion)(NSString *accessToken);
                                                           completion:completion];
                     });
                 } else {
-                    [TJDropbox accessTokenFromCode:code
-                              withClientIdentifier:clientIdentifier
-                                      codeVerifier:codeVerifier
-                                       redirectURL:redirectURL
-                                        completion:^(NSString * _Nullable accessToken, NSError * _Nullable error) {
+                    [TJDropbox credentialFromCode:code
+                             withClientIdentifier:clientIdentifier
+                                     codeVerifier:codeVerifier
+                                      redirectURL:redirectURL
+                                       completion:^(TJDropboxCredential *credential, NSError * _Nullable error) {
                         dispatch_async(dispatch_get_main_queue(), ^{
-                            completion(accessToken);
+                            completion(credential);
                         });
                     }];
                 }
@@ -224,7 +229,7 @@ static void (^_tj_completion)(NSString *accessToken);
                 completion(nil);
             }
         } else {
-            completion(token);
+            completion(credential);
         }
         
         [self setTj_clientIdentifier:nil];

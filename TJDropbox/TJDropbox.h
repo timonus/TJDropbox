@@ -21,6 +21,11 @@ extern NSString *const TJDropboxErrorUserInfoKeyResponse; // For errors with TJD
 extern NSString *const TJDropboxErrorUserInfoKeyDropboxError; // For error with TJDropboxErrorDomain, userInfo may contain a Dropbox API error response dictionary under this field.
 extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with TJDropboxErrorDomain, userInfo may contain a string under this field.
 
+/// This notification is posted whenever a long-lived @c TJDropboxCredential (i.e. with refresh token) refreshes its access token.
+/// You should observe this notification and save the updated credential when it's posted.
+/// The @c object this is posted on is the @c TJDropboxCredential being updated.
+extern NSString *const TJDropboxCredentialDidRefreshAccessTokenNotification;
+
 typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxSharedLinkType) {
     TJDropboxSharedLinkTypeDefault,
     TJDropboxSharedLinkTypeShort, // Uses deprecated endpoint to generate db.tt links
@@ -35,13 +40,29 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
     TJDropboxThumbnailSize1024x768
 };
 
+#if defined(__has_attribute) && __has_attribute(objc_direct_members)
+__attribute__((objc_direct_members))
+#endif
 @interface TJDropboxCredential : NSObject
 
-- (instancetype)initWithAccessToken:(NSString *const)accessToken;
+- (instancetype)initWithAccessToken:(NSString *const)accessToken NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithAccessToken:(NSString *const)accessToken
+                       refreshToken:(NSString *const)refreshToken
+                     expirationDate:(NSDate *const)expirationDate
+                   clientIdentifier:(NSString *const)clientIdentifier;
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;
 
 @property (nonatomic, copy, readonly) NSString *accessToken;
+
+@property (nonatomic, copy, readonly) NSString *refreshToken;
+@property (nonatomic, strong, readonly) NSDate *expirationDate;
+@property (nonatomic, copy, readonly) NSString *clientIdentifier;
+
+/// If you previously stored @c accessToken as a string, it can be passed to this initializer and you'll get a @c TJDropboxCredential back containing it.
+- (instancetype)initWithSerializedStringValue:(NSString *)serializedStringValue
+                             clientIdentifier:(NSString *)clientIdentifier;
+@property (nonatomic, copy, readonly) NSString *serializedStringValue;
 
 @end
 
@@ -52,20 +73,21 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
 /// Used to return the URL used to initate OAuth with Dropbox
 + (NSURL *)tokenAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                           redirectURL:(nullable NSURL *)redirectURL
-                                         codeVerifier:(nullable NSString *const)codeVerifier;
+                                         codeVerifier:(nullable NSString *const)codeVerifier
+                                 generateRefreshToken:(const BOOL)generateRefreshToken;
 
 /// Provides "default" app URL scheme that auth redirects back to (used by @c +tokenAuthenticationURLWithClientIdentifier: and @c +accessTokenFromURL:withClientIdentifier: internally).
 + (NSURL *)defaultTokenAuthenticationRedirectURLWithClientIdentifier:(NSString *const)clientIdentifier;
 
 /// Used to extract the access token returned from Dropbox OAuth
-+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
-+ (nullable NSString *)accessTokenFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
++ (nullable TJDropboxCredential *)credentialFromURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
++ (nullable TJDropboxCredential *)credentialFromURL:(NSURL *const)url withClientIdentifier:(NSString *const)clientIdentifier;
 
-+ (void)accessTokenFromCode:(NSString *const)code
-       withClientIdentifier:(NSString *const)clientIdentifier
-               codeVerifier:(NSString *const)codeVerifier
-                redirectURL:(NSURL *const)redirectURL
-                 completion:(void (^const)(NSString *_Nullable, NSError *_Nullable))completion; /// PKCE variant (more secure)
++ (void)credentialFromCode:(NSString *const)code
+      withClientIdentifier:(NSString *const)clientIdentifier
+              codeVerifier:(NSString *const)codeVerifier
+               redirectURL:(NSURL *const)redirectURL
+                completion:(void (^const)(TJDropboxCredential *_Nullable, NSError *_Nullable))completion; /// PKCE variant (more secure)
 
 /// Check if there was an authentication error (also happens when the user presses cancel on the website)
 + (BOOL)isAuthenticationErrorURL:(NSURL *const)url withRedirectURL:(NSURL *const)redirectURL;
@@ -76,7 +98,7 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
                                               codeVerifier:(nullable NSString *const)codeVerifier;
 
 /// Used to extract the access token from Dropbox app authentication
-+ (nullable NSString *)accessTokenFromDropboxAppAuthenticationURL:(NSURL *const)url;
++ (nullable TJDropboxCredential *)credentialFromDropboxAppAuthenticationURL:(NSURL *const)url;
 
 /// Revokes an access token.
 + (void)revokeCredential:(TJDropboxCredential *const)credential withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion;
