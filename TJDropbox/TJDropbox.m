@@ -14,6 +14,24 @@ NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
 NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
+@interface TJDropboxCredential ()
+
+@property (nonatomic, copy, readwrite) NSString *accessToken;
+
+@end
+
+@implementation TJDropboxCredential
+
+- (instancetype)initWithAccessToken:(NSString *const)accessToken
+{
+    if (self = [super init]) {
+        self.accessToken = accessToken;
+    }
+    return self;
+}
+
+@end
+
 #if defined(__has_attribute) && __has_attribute(objc_direct_members)
 __attribute__((objc_direct_members))
 #endif

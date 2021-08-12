@@ -35,6 +35,16 @@ typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
     TJDropboxThumbnailSize1024x768
 };
 
+@interface TJDropboxCredential : NSObject
+
+- (instancetype)initWithAccessToken:(NSString *const)accessToken;
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+
+@property (nonatomic, copy, readonly) NSString *accessToken;
+
+@end
+
 @interface TJDropbox : NSObject
 
 // Authentication
