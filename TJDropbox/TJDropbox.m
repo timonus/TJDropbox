@@ -360,9 +360,10 @@ static NSString *_asciiEncodeString(NSString *const string)
     // Useful: http://stackoverflow.com/a/1775880
     // Useful: https://www.objc.io/issues/9-strings/unicode/
     
-    NSMutableString *const result = string ? [NSMutableString new] : nil;
+    const NSUInteger stringLength = string.length;
+    NSMutableString *const result = string ? [NSMutableString stringWithCapacity:stringLength] : nil;
     
-    [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
+    [string enumerateSubstringsInRange:NSMakeRange(0, stringLength) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
         const unichar character = [substring characterAtIndex:0];
         NSString *stringToAppend = nil;
         if (character > 127) {
@@ -370,9 +371,7 @@ static NSString *_asciiEncodeString(NSString *const string)
         } else {
             stringToAppend = substring;
         }
-        if (stringToAppend) {
-            [result appendString:stringToAppend];
-        }
+        [result appendString:stringToAppend];
     }];
     
     return result;
