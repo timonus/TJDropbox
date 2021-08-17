@@ -12,6 +12,36 @@
 #import <SafariServices/SafariServices.h>
 #endif
 
+@interface TJDropboxAuthenticationOptions ()
+
+@property (nonatomic, readonly) BOOL generateRefreshToken;
+@property (nonatomic, readonly) BOOL bypassNativeAuth;
+@property (nonatomic, readonly) BOOL bypassPKCE;
+
+@end
+
+@implementation TJDropboxAuthenticationOptions
+
+- (instancetype)initWithGenerateRefreshToken {
+    if (self = [super init]) {
+        _generateRefreshToken = YES;
+        _bypassNativeAuth = YES;
+    }
+    return self;
+}
+
+- (instancetype)initWithBypassNativeAuth:(const BOOL)bypassNativeAuth
+                              bypassPKCE:(const BOOL)bypassPKCE
+{
+    if (self = [super init]) {
+        _bypassNativeAuth = bypassNativeAuth;
+        _bypassPKCE = bypassPKCE;
+    }
+    return self;
+}
+
+@end
+
 // DO NOT mark as Obj-C direct, will lead to exceptions.
 @interface TJDropboxAuthenticatorWebAuthenticationPresentationContextProvider : NSObject
 
@@ -79,9 +109,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
 }
 
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
-                     bypassingNativeAuth:(const BOOL)bypassNativeAuth
-                           bypassingPKCE:(const BOOL)bypassingPKCE
-                    generateRefreshToken:(const BOOL)generateRefreshToken
+                                 options:(nullable TJDropboxAuthenticationOptions *)options
                               completion:(void (^)(TJDropboxCredential *_Nullable))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
@@ -91,11 +119,11 @@ static void (^_tj_completion)(TJDropboxCredential *);
         return;
     }
     
-    NSString *const codeVerifier = bypassingPKCE ? nil : [NSString stringWithFormat:@"%@-%@", [[NSUUID UUID] UUIDString], [[NSUUID UUID] UUIDString]];
-    if (bypassNativeAuth) {
+    NSString *const codeVerifier = options.bypassPKCE ? nil : [NSString stringWithFormat:@"%@-%@", [[NSUUID UUID] UUIDString], [[NSUUID UUID] UUIDString]];
+    if (options.bypassNativeAuth) {
         [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                              codeVerifier:codeVerifier
-                                     generateRefreshToken:generateRefreshToken
+                                     generateRefreshToken:options.generateRefreshToken
                                                completion:completion];
     } else {
         NSURL *const tokenAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier
@@ -110,7 +138,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
             } else {
                 [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                                      codeVerifier:codeVerifier
-                                             generateRefreshToken:generateRefreshToken
+                                             generateRefreshToken:options.generateRefreshToken
                                                        completion:completion];
             }
         }];

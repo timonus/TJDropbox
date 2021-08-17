@@ -9,6 +9,17 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface TJDropboxAuthenticationOptions : NSObject
+
+/// Credentials will be long-lived.
+- (instancetype)initWithGenerateRefreshToken;
+
+/// Credentials will be short-lived after Sept. 30 2021 https://developers.dropbox.com/oauth-guide#using-refresh-tokens
+- (instancetype)initWithBypassNativeAuth:(const BOOL)bypassNativeAuth
+                              bypassPKCE:(const BOOL)bypassPKCE;
+
+@end
+
 API_AVAILABLE(ios(10.0)) @interface TJDropboxAuthenticator : NSObject
 
 /**
@@ -18,9 +29,7 @@ API_AVAILABLE(ios(10.0)) @interface TJDropboxAuthenticator : NSObject
  * @param completion Block invoked when auth is complete. @c accessToken will be @c nil if auth wasn't completed.
  */
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
-                     bypassingNativeAuth:(const BOOL)bypassNativeAuth
-                           bypassingPKCE:(const BOOL)bypassingPKCE
-                    generateRefreshToken:(const BOOL)generateRefreshToken
+                                 options:(nullable TJDropboxAuthenticationOptions *)options
                               completion:(void (^)(TJDropboxCredential *_Nullable))completion;
 
 /// Invoke this from your app delegate's implementation of -application:openURL:options:, returns whether or not the URL was a completion callback to Dropbox auth.
