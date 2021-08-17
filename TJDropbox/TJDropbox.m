@@ -1049,6 +1049,7 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
     return isPathNotFoundError;
 }
 
+// Happens when token isn't recognized (401)
 - (BOOL)tj_isInvalidAccessTokenError
 {
     BOOL isInvalidAccessTokenError = NO;
@@ -1056,6 +1057,20 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
         NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
         NSString *const tag = dropboxErrorDictionary[@".tag"];
         if ([tag isEqualToString:@"invalid_access_token"]) {
+            isInvalidAccessTokenError = YES;
+        }
+    }
+    return isInvalidAccessTokenError;
+}
+
+// Happens when access token is expired, needs refresh (401)
+- (BOOL)tj_isExpiredAccessTokenError
+{
+    BOOL isInvalidAccessTokenError = NO;
+    if ([self.domain isEqualToString:TJDropboxErrorDomain]) {
+        NSDictionary *const dropboxErrorDictionary = self.userInfo[TJDropboxErrorUserInfoKeyDropboxError];
+        NSString *const tag = dropboxErrorDictionary[@".tag"];
+        if ([tag isEqualToString:@"expired_access_token"]) {
             isInvalidAccessTokenError = YES;
         }
     }
