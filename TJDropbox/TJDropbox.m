@@ -456,7 +456,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                 accessToken = queryItem.value;
                 break;
             }
-            // TODO: DO OTHER FIELDS WORK HERE?
+            // Note: It seems that you cannot get refresh tokens from app-to-app auth.
         }
     }
     return accessToken ? [[TJDropboxCredential alloc] initWithAccessToken:accessToken] : nil;
