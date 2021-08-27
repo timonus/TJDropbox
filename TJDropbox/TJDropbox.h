@@ -56,7 +56,7 @@ __attribute__((objc_direct_members))
 @property (nonatomic, copy, readonly) NSString *accessToken;
 
 @property (nonatomic, copy, readonly) NSString *refreshToken;
-@property (nonatomic, strong, readonly) NSDate *expirationDate;
+@property (nonatomic, readonly) NSDate *expirationDate;
 @property (nonatomic, copy, readonly) NSString *clientIdentifier;
 
 /// If you previously stored @c accessToken as a string, it can be passed to this initializer and you'll get a @c TJDropboxCredential back containing it.

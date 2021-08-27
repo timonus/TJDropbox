@@ -24,7 +24,7 @@ __attribute__((objc_direct_members))
 @property (nonatomic, copy, readwrite) NSString *accessToken;
 
 @property (nonatomic, copy, readwrite) NSString *refreshToken;
-@property (nonatomic, strong, readwrite) NSDate *expirationDate;
+@property (nonatomic, readwrite) NSDate *expirationDate;
 @property (nonatomic, copy, readwrite) NSString *clientIdentifier;
 
 @property (nonatomic) NSMutableArray<void (^)(NSDictionary *, NSError *)> *refreshCompletionBlocks;
