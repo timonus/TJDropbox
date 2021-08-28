@@ -12,7 +12,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface TJDropboxAuthenticationOptions : NSObject
 
 /// Credentials will be long-lived.
-- (instancetype)initWithGenerateRefreshToken;
+- (instancetype)initWithGenerateRefreshToken:(BOOL)generateRefreshToken
+                            bypassNativeAuth:(const BOOL)bypassNativeAuth;
 
 /// Credentials will be short-lived after Sept. 30 2021 https://developers.dropbox.com/oauth-guide#using-refresh-tokens
 - (instancetype)initWithBypassNativeAuth:(const BOOL)bypassNativeAuth
