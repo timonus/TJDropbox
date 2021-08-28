@@ -96,7 +96,7 @@ __attribute__((objc_direct_members))
 /// Used to return the URL used to initiate authentication with the installed Dropbox app
 + (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                               codeVerifier:(nullable NSString *const)codeVerifier
-									  generateRefreshToken:(const BOOL)generateRefreshToken;
+                                      generateRefreshToken:(const BOOL)generateRefreshToken;
 
 /// Used to extract the access token from Dropbox app authentication
 + (nullable TJDropboxCredential *)credentialFromDropboxAppAuthenticationURL:(NSURL *const)url;
