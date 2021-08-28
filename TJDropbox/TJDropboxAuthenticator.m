@@ -22,10 +22,11 @@
 
 @implementation TJDropboxAuthenticationOptions
 
-- (instancetype)initWithGenerateRefreshToken {
+- (instancetype)initWithGenerateRefreshToken:(BOOL)generateRefreshToken
+                            bypassNativeAuth:(const BOOL)bypassNativeAuth {
     if (self = [super init]) {
-        _generateRefreshToken = YES;
-        _bypassNativeAuth = YES;
+        _generateRefreshToken = generateRefreshToken;
+        _bypassNativeAuth = bypassNativeAuth;
     }
     return self;
 }
@@ -127,7 +128,8 @@ static void (^_tj_completion)(TJDropboxCredential *);
                                                completion:completion];
     } else {
         NSURL *const tokenAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier
-                                                                                  codeVerifier:codeVerifier];
+                                                                                  codeVerifier:codeVerifier
+                                                                          generateRefreshToken:options.generateRefreshToken];
         [[UIApplication sharedApplication] openURL:tokenAuthURL
                                            options:@{}
                                  completionHandler:^(BOOL success) {

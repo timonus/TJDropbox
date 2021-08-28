@@ -409,6 +409,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
 
 + (NSURL *)dropboxAppAuthenticationURLWithClientIdentifier:(NSString *const)clientIdentifier
                                               codeVerifier:(nullable NSString *const)codeVerifier
+                                      generateRefreshToken:(const BOOL)generateRefreshToken
 {
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L288-L303
     // https://github.com/dropbox/SwiftyDropbox/blob/master/Source/OAuth.swift#L274-L282
@@ -419,14 +420,21 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     NSString *extraQueryParams = nil;
     if (codeVerifier) {
         NSString *const codeChallenge = _codeChallengeFromCodeVerifier(codeVerifier);
-        stateString = [NSString stringWithFormat:@"oauth2code:%@:S256:", codeChallenge];
+        stateString = [NSString stringWithFormat:@"oauth2code:%@:S256", codeChallenge];
+        
+        if (generateRefreshToken) {
+            stateString = [stateString stringByAppendingString:@":offline"];
+        }
         
         NSURLComponents *const extraComponents = [NSURLComponents new];
-        extraComponents.queryItems = @[
-            [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
-            [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
-            [NSURLQueryItem queryItemWithName:@"response_type" value:@"code"],
-        ];
+        
+        extraComponents.queryItems = [NSArray arrayWithObjects:
+                                      [NSURLQueryItem queryItemWithName:@"code_challenge" value:codeChallenge],
+                                      [NSURLQueryItem queryItemWithName:@"code_challenge_method" value:@"S256"],
+                                      [NSURLQueryItem queryItemWithName:@"response_type" value:@"code"],
+                                      generateRefreshToken ? [NSURLQueryItem queryItemWithName:@"token_access_type" value:@"offline"] : nil,
+                                      nil
+                                      ];
         extraQueryParams = extraComponents.query;
     } else {
         NSString *const nonce = [[NSUUID UUID] UUIDString];
