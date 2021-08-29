@@ -420,10 +420,10 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
     NSString *extraQueryParams = nil;
     if (codeVerifier) {
         NSString *const codeChallenge = _codeChallengeFromCodeVerifier(codeVerifier);
-        stateString = [NSString stringWithFormat:@"oauth2code:%@:S256", codeChallenge];
+        stateString = [NSString stringWithFormat:@"oauth2code:%@:S256:", codeChallenge];
         
         if (generateRefreshToken) {
-            stateString = [stateString stringByAppendingString:@":offline"];
+            stateString = [stateString stringByAppendingString:@"offline"];
         }
         
         NSURLComponents *const extraComponents = [NSURLComponents new];
