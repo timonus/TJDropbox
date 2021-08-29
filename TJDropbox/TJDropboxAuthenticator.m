@@ -12,6 +12,9 @@
 #import <SafariServices/SafariServices.h>
 #endif
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @interface TJDropboxAuthenticationOptions ()
 
 @property (nonatomic, readonly) BOOL generateRefreshToken;
@@ -20,6 +23,9 @@
 
 @end
 
+#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
+__attribute__((objc_direct_members))
+#endif
 @implementation TJDropboxAuthenticationOptions
 
 - (instancetype)initWithGenerateRefreshToken:(BOOL)generateRefreshToken
