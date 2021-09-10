@@ -14,10 +14,10 @@ Authentication with TJDropbox is pretty flexible. The simplest way to do it woul
 - (void)authenticate
 {
     [TJDropboxAuthenticator authenticateWithClientIdentifier:/*Dropbox client identifier*/
-                                         bypassingNativeAuth:NO
-                                                  completion:^(NSString *accessToken) {
-        if (accessToken) {
-            // Auth succeeded, store token.
+                                         options:/*Options for auth*/
+                                                  completion:^(TJDropboxCredential *credential) {
+        if (credential) {
+            // Auth succeeded, store credential.
         } else {
             // Auth did not succeed.
         }
@@ -27,14 +27,14 @@ Authentication with TJDropbox is pretty flexible. The simplest way to do it woul
 
 Be sure to call `+tryHandleAuthenticationCallbackWithURL:` from your app delegate's `-application:openURL:options:` method for this to work. `TJDropboxAuthenticator` attempts auth using the following methods in order of preference.
 
-1. The Dropbox app (bypassed if `bypassingNativeAuth` is `NO`)
+1. The Dropbox app (bypassed if `bypassNativeAuth` is `YES` in `options`)
 2. `ASWebAuthenticationSession` in iOS 12+.
 3. `SFAuthenticationSession` in iOS 11+.
 4. Auth in Safari.app
 
 That being said, you can also authenticate manually using the utility methods TJDropbox provides. Advanced auth is detailed [here](Docs/advanced-auth.md).
 
-Just as with migrating a v1 token to v2, TJDropbox doesn't store the credentials, that's up to you.
+TJDropbox doesn't store the credentials, that's up to you.
 
 ## Provided Request Types
 
