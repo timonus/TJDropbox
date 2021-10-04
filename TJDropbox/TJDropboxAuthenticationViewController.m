@@ -45,7 +45,7 @@
     self.webView.delegate = self;
     [self.view addSubview:self.webView];
     
-    NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:self.clientIdentifier];
+    NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:self.clientIdentifier redirectURL:nil codeVerifier:nil generateRefreshToken:NO]; // todo: param
     [self.webView loadRequest:[NSURLRequest requestWithURL:url]];
 }
 
@@ -55,7 +55,7 @@
 {
     BOOL shouldStartLoad = YES;
     
-    NSString *const accessToken = [TJDropbox accessTokenFromURL:request.URL withClientIdentifier:self.clientIdentifier];
+    NSString *const accessToken = [TJDropbox credentialFromURL:request.URL withClientIdentifier:self.clientIdentifier].accessToken;
     if (accessToken.length > 0) {
         shouldStartLoad = NO;
         [self.delegate dropboxAuthenticationViewController:self didAuthenticateWithAccessToken:accessToken];
