@@ -59,7 +59,7 @@ static NSString *const kRedirectURLString = nil;
     if (self.accessToken.length > 0) {
         self.accessToken = nil;
     } else {
-        TJDropboxAuthenticationViewController *authenticationController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:kClientIdentifier redirectURL:[NSURL URLWithString:kRedirectURLString] delegate:self];
+        TJDropboxAuthenticationViewController *authenticationController = [[TJDropboxAuthenticationViewController alloc] initWithClientIdentifier:kClientIdentifier delegate:self];
         [self.navigationController pushViewController:authenticationController animated:YES];
     }
 }
@@ -99,7 +99,7 @@ static NSString *const kRedirectURLString = nil;
         NSString *remotePath = [NSString stringWithFormat:@"/%@", filename];
         [@"Hello World!" writeToFile:localPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
         
-        [TJDropbox uploadFileAtPath:localPath toPath:remotePath accessToken:self.accessToken completion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+        [TJDropbox uploadFileAtPath:localPath toPath:remotePath credential:[[TJDropboxCredential alloc] initWithAccessToken:self.accessToken] completion:^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (error) {
                     self.outputTextView.text = [error description];
