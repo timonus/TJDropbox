@@ -595,31 +595,12 @@ static NSURLSession *_session()
     return session;
 }
 
-// This queue must be used when accessing the list of tasks (+[tasks] method).
-// This ensures that the hash tables is only accessed by one thread at once.
-static void _performBlockWithTasks(void (^block)(NSHashTable<NSURLSessionTask *> *tasks))
-{
-    static dispatch_queue_t tasksQueue;
-    static NSHashTable<NSURLSessionTask *> *hashTable;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        tasksQueue = dispatch_queue_create("TJDropbox Tasks Queue", DISPATCH_QUEUE_SERIAL);
-        hashTable = [NSHashTable weakObjectsHashTable];
-    });
-    dispatch_async(tasksQueue, ^{
-        block(hashTable);
-    });
-}
-
 static void _addTask(TJDropboxCredential *credential,
                      NSURLSessionTask *(^taskBlock)(void),
                      void (^const refreshErrorCompletion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
     dispatch_block_t performTaskBlock = ^{
         NSURLSessionTask *task = taskBlock();
-        _performBlockWithTasks(^(NSHashTable<NSURLSessionTask *> *tasks) {
-            [tasks addObject:task];
-        });
         [task resume];
     };
     if (credential) {
@@ -1246,11 +1227,9 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
 
 + (void)cancelAllRequests
 {
-    _performBlockWithTasks(^(NSHashTable<NSURLSessionTask *> *tasks) {
-        for (NSURLSessionTask *const task in tasks) {
-            [task cancel];
-        }
-    });
+    [_session() getAllTasksWithCompletionHandler:^(NSArray<__kindof NSURLSessionTask *> * _Nonnull tasks) {
+        [tasks makeObjectsPerformSelector:@selector(cancel)];
+    }];
 }
 
 @end
