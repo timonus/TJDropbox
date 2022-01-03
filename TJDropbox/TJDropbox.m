@@ -14,7 +14,7 @@ NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
 NSString *const TJDropboxErrorUserInfoKeyDropboxError = @"dropboxError";
 NSString *const TJDropboxErrorUserInfoKeyErrorString = @"errorString";
 
-NSString *const TJDropboxCredentialDidRefreshAccessTokenNotification = @"TJDropboxCredentialDidRefreshAccessTokenNotification";
+NSNotificationName const TJDropboxCredentialDidRefreshAccessTokenNotification = @"TJDropboxCredentialDidRefreshAccessTokenNotification";
 
 #if defined(__has_attribute) && __has_attribute(objc_direct_members)
 __attribute__((objc_direct_members))

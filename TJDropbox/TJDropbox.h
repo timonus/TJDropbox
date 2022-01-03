@@ -24,7 +24,7 @@ extern NSString *const TJDropboxErrorUserInfoKeyErrorString; // For error with T
 /// This notification is posted whenever a long-lived @c TJDropboxCredential (i.e. with refresh token) refreshes its access token.
 /// You should observe this notification and save the updated credential when it's posted.
 /// The @c object this is posted on is the @c TJDropboxCredential being updated.
-extern NSString *const TJDropboxCredentialDidRefreshAccessTokenNotification;
+extern NSNotificationName const TJDropboxCredentialDidRefreshAccessTokenNotification;
 
 typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxSharedLinkType) {
     TJDropboxSharedLinkTypeDefault,
