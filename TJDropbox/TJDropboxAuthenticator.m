@@ -120,7 +120,10 @@ static void (^_tj_completion)(TJDropboxCredential *);
 
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                                  options:(nullable TJDropboxAuthenticationOptions *)options
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
              presentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
+#pragma clang diagnostic pop
                               completion:(void (^)(TJDropboxCredential *_Nullable))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
@@ -162,7 +165,10 @@ static void (^_tj_completion)(TJDropboxCredential *);
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
                                        codeVerifier:(NSString *const)codeVerifier
                                generateRefreshToken:(const BOOL)generateRefreshToken
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability"
                         presentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
+#pragma clang diagnostic pop
                                          completion:(void (^)(TJDropboxCredential *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
