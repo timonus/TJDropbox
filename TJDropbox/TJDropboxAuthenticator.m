@@ -60,7 +60,10 @@ __attribute__((objc_direct_members))
 
 + (ASPresentationAnchor)presentationAnchorForWebAuthenticationSession:(ASWebAuthenticationSession *)session API_AVAILABLE(ios(13.0))
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [[UIApplication sharedApplication] keyWindow];
+#pragma clang diagnostic pop
 }
 
 @end
@@ -117,6 +120,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
 
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                                  options:(nullable TJDropboxAuthenticationOptions *)options
+             presentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
                               completion:(void (^)(TJDropboxCredential *_Nullable))completion
 {
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
@@ -131,6 +135,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
         [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                              codeVerifier:codeVerifier
                                      generateRefreshToken:options.generateRefreshToken
+                              presentationContextProvider:presentationContextProvider
                                                completion:completion];
     } else {
         NSURL *const tokenAuthURL = [TJDropbox dropboxAppAuthenticationURLWithClientIdentifier:clientIdentifier
@@ -147,6 +152,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
                 [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                                      codeVerifier:codeVerifier
                                              generateRefreshToken:options.generateRefreshToken
+                                      presentationContextProvider:presentationContextProvider
                                                        completion:completion];
             }
         }];
@@ -156,6 +162,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
                                        codeVerifier:(NSString *const)codeVerifier
                                generateRefreshToken:(const BOOL)generateRefreshToken
+                        presentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
                                          completion:(void (^)(TJDropboxCredential *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
@@ -180,7 +187,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
                                                 callbackURLScheme:redirectURLScheme
                                                 completionHandler:completionHandler];
         if (@available(iOS 13.0, *)) {
-            [(ASWebAuthenticationSession *)session setPresentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)[TJDropboxAuthenticatorWebAuthenticationPresentationContextProvider class]];
+            [(ASWebAuthenticationSession *)session setPresentationContextProvider:presentationContextProvider ?: (id<ASWebAuthenticationPresentationContextProviding>)[TJDropboxAuthenticatorWebAuthenticationPresentationContextProvider class]];
         }
         [(ASWebAuthenticationSession *)session start];
 #if !defined(__IPHONE_12_0) || __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_12_0

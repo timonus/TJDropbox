@@ -7,6 +7,8 @@
 
 #import <Foundation/Foundation.h>
 
+@protocol ASWebAuthenticationPresentationContextProviding;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface TJDropboxAuthenticationOptions : NSObject
@@ -31,6 +33,7 @@ API_AVAILABLE(ios(10.0)) @interface TJDropboxAuthenticator : NSObject
  */
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                                  options:(nullable TJDropboxAuthenticationOptions *)options
+             presentationContextProvider:(nullable id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
                               completion:(void (^)(TJDropboxCredential *_Nullable))completion;
 
 /// Invoke this from your app delegate's implementation of -application:openURL:options:, returns whether or not the URL was a completion callback to Dropbox auth.
