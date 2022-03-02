@@ -71,52 +71,11 @@ __attribute__((objc_direct_members))
 #if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
 __attribute__((objc_direct_members))
 #endif
-@interface TJDropboxAuthenticator ()
-
-@property (nonatomic, copy, class) NSString *tj_clientIdentifier;
-@property (nonatomic, copy, class) NSString *tj_codeVerifier;
-@property (nonatomic, copy, class) void (^tj_completion)(TJDropboxCredential *);
-
-@end
-
-#if defined(__IPHONE_14_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
-__attribute__((objc_direct_members))
-#endif
 @implementation TJDropboxAuthenticator
 
 static NSString *_tj_clientIdentifier;
 static NSString *_tj_codeVerifier;
 static void (^_tj_completion)(TJDropboxCredential *);
-
-+ (void)setTj_clientIdentifier:(NSString *)tj_clientIdentifier
-{
-    _tj_clientIdentifier = tj_clientIdentifier;
-}
-
-+ (void)setTj_codeVerifier:(NSString *)tj_codeVerifier
-{
-    _tj_codeVerifier = tj_codeVerifier;
-}
-
-+ (void)setTj_completion:(void (^)(TJDropboxCredential *))tj_completion
-{
-    _tj_completion = tj_completion;
-}
-
-+ (NSString *)tj_clientIdentifier
-{
-    return _tj_clientIdentifier;
-}
-
-+ (NSString *)tj_codeVerifier
-{
-    return _tj_codeVerifier;
-}
-
-+ (void (^)(TJDropboxCredential *))tj_completion
-{
-    return _tj_completion;
-}
 
 + (void)authenticateWithClientIdentifier:(NSString *const)clientIdentifier
                                  options:(nullable TJDropboxAuthenticationOptions *)options
@@ -148,9 +107,9 @@ static void (^_tj_completion)(TJDropboxCredential *);
                                            options:@{}
                                  completionHandler:^(BOOL success) {
             if (success) {
-                [self setTj_clientIdentifier:clientIdentifier];
-                [self setTj_codeVerifier:codeVerifier];
-                [self setTj_completion:completion];
+                _tj_clientIdentifier = clientIdentifier;
+                _tj_codeVerifier = codeVerifier;
+                _tj_completion = completion;
             } else {
                 [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
                                                      codeVerifier:codeVerifier
@@ -209,9 +168,9 @@ static void (^_tj_completion)(TJDropboxCredential *);
     } else {
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
             if (success) {
-                [self setTj_clientIdentifier:clientIdentifier];
-                [self setTj_codeVerifier:codeVerifier];
-                [self setTj_completion:completion];
+                _tj_clientIdentifier = clientIdentifier;
+                _tj_codeVerifier = codeVerifier;
+                _tj_completion = completion;
             } else {
                 completion(nil);
             }
@@ -222,9 +181,9 @@ static void (^_tj_completion)(TJDropboxCredential *);
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
 {
     return [self tryHandleAuthenticationCallbackWithURL:url
-                                       clientIdentifier:[self tj_clientIdentifier]
-                                           codeVerifier:[self tj_codeVerifier]
-                                             completion:[self tj_completion]];
+                                       clientIdentifier:_tj_clientIdentifier
+                                           codeVerifier:_tj_codeVerifier
+                                             completion:_tj_completion];
 }
 
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
@@ -281,9 +240,9 @@ static void (^_tj_completion)(TJDropboxCredential *);
             completion(credential);
         }
         
-        [self setTj_clientIdentifier:nil];
-        [self setTj_codeVerifier:nil];
-        [self setTj_completion:nil];
+        _tj_clientIdentifier = nil;
+        _tj_codeVerifier = nil;
+        _tj_completion = nil;
         
         handledURL = YES;
     }
