@@ -157,6 +157,9 @@ __attribute__((objc_direct_members))
 
 @end
 
+#if defined(__has_attribute) && __has_attribute(objc_direct_members)
+__attribute__((objc_direct_members))
+#endif
 @interface NSError (TJDropbox)
 
 @property (nonatomic, readonly) BOOL tj_isPathNotFoundError;
