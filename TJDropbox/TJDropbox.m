@@ -513,7 +513,11 @@ static NSString * _parameterStringForParameters(NSDictionary<NSString *, id> *pa
     NSString *parameterString = nil;
     if (parameters.count > 0) {
         NSError *error = nil;
-        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:0 error:&error];
+        NSJSONWritingOptions options = 0;
+        if (@available(iOS 13.0, macOS 10.15, *)) {
+            options = NSJSONWritingWithoutEscapingSlashes;
+        }
+        NSData *const parameterData = [NSJSONSerialization dataWithJSONObject:parameters options:options error:&error];
         if (error) {
             NSLog(@"[TJDropbox] - Error in %s: %@", __PRETTY_FUNCTION__, error);
         } else {
