@@ -8,6 +8,7 @@
 
 #import "TJDropbox.h"
 #import <CommonCrypto/CommonDigest.h>
+#import <os/lock.h>
 
 NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
@@ -19,7 +20,9 @@ NSNotificationName const TJDropboxCredentialDidRefreshAccessTokenNotification = 
 #if defined(__has_attribute) && __has_attribute(objc_direct_members)
 __attribute__((objc_direct_members))
 #endif
-@interface TJDropboxCredential ()
+@interface TJDropboxCredential () {
+    os_unfair_lock _lock;
+}
 
 @property (nonatomic, copy, readwrite) NSString *accessToken;
 
@@ -37,6 +40,7 @@ __attribute__((objc_direct_members))
 {
     if (self = [super init]) {
         self.accessToken = accessToken;
+        _lock = OS_UNFAIR_LOCK_INIT;
     }
     return self;
 }
@@ -94,13 +98,14 @@ __attribute__((objc_direct_members))
 
 - (NSString *)serializedStringValue
 {
-    @synchronized (self) {
-        NSString *serializedStringValue = self.accessToken;
+    __block NSString *serializedStringValue;
+    [self performSynchronized:^{
+        serializedStringValue = self.accessToken;
         if (self.refreshToken && self.expirationDate) {
             serializedStringValue = [serializedStringValue stringByAppendingFormat:@"\n%@\n%@", self.refreshToken, @([self.expirationDate timeIntervalSinceReferenceDate])];
         }
-        return serializedStringValue;
-    }
+    }];
+    return serializedStringValue;
 }
 
 - (BOOL)isEqual:(id)object {
@@ -114,6 +119,12 @@ __attribute__((objc_direct_members))
          [[(TJDropboxCredential *)object accessToken] isEqual:self.accessToken]);
     }
     return object;
+}
+
+- (void)performSynchronized:(dispatch_block_t)block {
+    os_unfair_lock_lock(&_lock);
+    block();
+    os_unfair_lock_unlock(&_lock);
 }
 
 @end
@@ -601,31 +612,29 @@ static void _addTask(TJDropboxCredential *credential,
         NSURLSessionTask *task = taskBlock();
         [task resume];
     };
-    if (credential) {
-        @synchronized (credential) {
-            if (credential.expirationDate != nil && credential.expirationDate.timeIntervalSinceNow < 600.0) { // Refresh if there are fewer than 10 minutes until expiration
-                void (^refreshCompletionBlock)(NSDictionary *, NSError *) = ^(NSDictionary *parsedResponse, NSError *error) {
-                    credential.refreshCompletionBlocks = nil;
-                    if (error) {
-                        refreshErrorCompletion(parsedResponse, error);
-                    } else {
-                        performTaskBlock();
-                    }
-                };
-                if (credential.refreshCompletionBlocks) {
-                    [credential.refreshCompletionBlocks addObject:refreshErrorCompletion];
+    [credential performSynchronized:^{
+        if (credential.expirationDate != nil && credential.expirationDate.timeIntervalSinceNow < 600.0) { // Refresh if there are fewer than 10 minutes until expiration
+            void (^refreshCompletionBlock)(NSDictionary *, NSError *) = ^(NSDictionary *parsedResponse, NSError *error) {
+                credential.refreshCompletionBlocks = nil;
+                if (error) {
+                    refreshErrorCompletion(parsedResponse, error);
                 } else {
-                    credential.refreshCompletionBlocks = [NSMutableArray arrayWithObject:refreshCompletionBlock];
-                    _refreshCredential(credential, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
-                        for (void (^block)(NSDictionary *, NSError *) in credential.refreshCompletionBlocks) {
-                            block(parsedResponse, error);
-                        }
-                    });
+                    performTaskBlock();
                 }
-                return;
+            };
+            if (credential.refreshCompletionBlocks) {
+                [credential.refreshCompletionBlocks addObject:refreshErrorCompletion];
+            } else {
+                credential.refreshCompletionBlocks = [NSMutableArray arrayWithObject:refreshCompletionBlock];
+                _refreshCredential(credential, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+                    for (void (^block)(NSDictionary *, NSError *) in credential.refreshCompletionBlocks) {
+                        block(parsedResponse, error);
+                    }
+                });
             }
+            return;
         }
-    }
+    }];
     
     performTaskBlock();
 }
@@ -666,10 +675,10 @@ static void _refreshCredential(TJDropboxCredential *const credential, void (^com
         const id expiresInValue = parsedResponse[@"expires_in"];
         NSDate *const expirationDate = expiresInValue ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
         if (accessToken && expirationDate) {
-            @synchronized (credential) {
+            [credential performSynchronized:^{
                 credential.accessToken = accessToken;
                 credential.expirationDate = expirationDate;
-            }
+            }];
             [[NSNotificationCenter defaultCenter] postNotificationName:TJDropboxCredentialDidRefreshAccessTokenNotification
                                                                 object:credential];
         }
