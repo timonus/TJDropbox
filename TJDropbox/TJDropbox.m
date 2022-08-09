@@ -612,31 +612,40 @@ static void _addTask(TJDropboxCredential *credential,
         NSURLSessionTask *task = taskBlock();
         [task resume];
     };
-    [credential performSynchronized:^{
-        if (credential.expirationDate != nil && credential.expirationDate.timeIntervalSinceNow < 600.0) { // Refresh if there are fewer than 10 minutes until expiration
-            void (^refreshCompletionBlock)(NSDictionary *, NSError *) = ^(NSDictionary *parsedResponse, NSError *error) {
-                credential.refreshCompletionBlocks = nil;
-                if (error) {
-                    refreshErrorCompletion(parsedResponse, error);
-                } else {
-                    performTaskBlock();
-                }
-            };
-            if (credential.refreshCompletionBlocks) {
-                [credential.refreshCompletionBlocks addObject:refreshErrorCompletion];
-            } else {
-                credential.refreshCompletionBlocks = [NSMutableArray arrayWithObject:refreshCompletionBlock];
-                _refreshCredential(credential, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
-                    for (void (^block)(NSDictionary *, NSError *) in credential.refreshCompletionBlocks) {
-                        block(parsedResponse, error);
+    __block BOOL runBlock;
+    if (credential) {
+        [credential performSynchronized:^{
+            if (credential.expirationDate != nil && credential.expirationDate.timeIntervalSinceNow < 600.0) { // Refresh if there are fewer than 10 minutes until expiration
+                void (^refreshCompletionBlock)(NSDictionary *, NSError *) = ^(NSDictionary *parsedResponse, NSError *error) {
+                    credential.refreshCompletionBlocks = nil;
+                    if (error) {
+                        refreshErrorCompletion(parsedResponse, error);
+                    } else {
+                        performTaskBlock();
                     }
-                });
+                };
+                if (credential.refreshCompletionBlocks) {
+                    [credential.refreshCompletionBlocks addObject:refreshErrorCompletion];
+                } else {
+                    credential.refreshCompletionBlocks = [NSMutableArray arrayWithObject:refreshCompletionBlock];
+                    _refreshCredential(credential, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
+                        for (void (^block)(NSDictionary *, NSError *) in credential.refreshCompletionBlocks) {
+                            block(parsedResponse, error);
+                        }
+                    });
+                }
+                runBlock = NO;
+            } else {
+                runBlock = YES;
             }
-            return;
-        }
-    }];
+        }];
+    } else {
+        runBlock = YES;
+    }
     
-    performTaskBlock();
+    if (runBlock) {
+        performTaskBlock();
+    }
 }
 
 static void _performAPIRequest(TJDropboxCredential *credential, NSURLRequest *(^requestBlock)(void), void (^const completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
