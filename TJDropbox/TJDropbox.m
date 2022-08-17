@@ -505,16 +505,14 @@ static NSString *_asciiEncodeString(NSString *const string)
     const NSUInteger stringLength = string.length;
     NSMutableString *const result = string ? [NSMutableString stringWithCapacity:stringLength] : nil;
     
-    [string enumerateSubstringsInRange:NSMakeRange(0, stringLength) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString * _Nullable substring, NSRange substringRange, NSRange enclosingRange, BOOL * _Nonnull stop) {
-        const unichar character = [substring characterAtIndex:0];
-        NSString *stringToAppend = nil;
+    for (NSUInteger i = 0; i < stringLength; i++) {
+        const unichar character = [string characterAtIndex:i];
         if (character > 127) {
-            stringToAppend = [NSString stringWithFormat:@"\\u%04x", character];
+            [result appendFormat:@"\\u%04x", character];
         } else {
-            stringToAppend = substring;
+            [result appendFormat:@"%c", character];
         }
-        [result appendString:stringToAppend];
-    }];
+    }
     
     return result;
 }
