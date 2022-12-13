@@ -180,6 +180,11 @@ __attribute__((objc_direct_members))
             completionBlock:completionBlock
                     forTask:task
               expectedClass:[NSURLSessionDataTask class]];
+    if (@available(iOS 14.5, *)) {
+        if (!progressBlock) {
+            task.prefersIncrementalDelivery = NO;
+        }
+    }
 }
 
 - (void)setProgressBlock:(nullable void (^const)(CGFloat progress))progressBlock
@@ -910,7 +915,12 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         NSURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
         
         NSURLSessionUploadTask *const task = [_session() uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
-        
+        if (@available(iOS 14.5, *)) {
+            if (!progressBlock) {
+                task.prefersIncrementalDelivery = NO;
+            }
+        }
+            
         [_taskDelegate() setProgressBlock:progressBlock
                           completionBlock:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
             NSDictionary *parsedResult = nil;
@@ -989,6 +999,12 @@ static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long file
             };
         } else {
             totalProgressBlock = nil;
+        }
+        
+        if (@available(iOS 14.5, *)) {
+            if (!totalProgressBlock) {
+                task.prefersIncrementalDelivery = NO;
+            }
         }
         [_taskDelegate() setProgressBlock:totalProgressBlock
                           completionBlock:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
