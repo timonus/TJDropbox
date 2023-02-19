@@ -584,7 +584,7 @@ static NSMutableURLRequest *_contentRequest(NSString *const path, NSString *cons
     return request;
 }
 
-static TJDropboxURLSessionTaskDelegate *_taskDelegate()
+static TJDropboxURLSessionTaskDelegate *_taskDelegate(void)
 {
     static TJDropboxURLSessionTaskDelegate *taskDelegate;
     static dispatch_once_t onceToken;
@@ -594,7 +594,7 @@ static TJDropboxURLSessionTaskDelegate *_taskDelegate()
     return taskDelegate;
 }
 
-static NSURLSession *_session()
+static NSURLSession *_session(void)
 {
     static NSURLSession *session;
     static dispatch_once_t onceToken;
