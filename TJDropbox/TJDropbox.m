@@ -180,7 +180,7 @@ __attribute__((objc_direct_members))
             completionBlock:completionBlock
                     forTask:task
               expectedClass:[NSURLSessionDataTask class]];
-    if (@available(iOS 14.5, *)) {
+    if (@available(iOS 14.5, macOS 11.3, *)) {
         if (!progressBlock) {
             task.prefersIncrementalDelivery = NO;
         }
@@ -917,7 +917,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         NSURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
         
         NSURLSessionUploadTask *const task = [_session() uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
-        if (@available(iOS 14.5, *)) {
+        if (@available(iOS 14.5, macOS 11.3, *)) {
             if (!progressBlock) {
                 task.prefersIncrementalDelivery = NO;
             }
@@ -1003,7 +1003,7 @@ static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long file
             totalProgressBlock = nil;
         }
         
-        if (@available(iOS 14.5, *)) {
+        if (@available(iOS 14.5, macOS 11.3, *)) {
             if (!totalProgressBlock) {
                 task.prefersIncrementalDelivery = NO;
             }
