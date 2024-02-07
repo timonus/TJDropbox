@@ -118,7 +118,7 @@ __attribute__((objc_direct_members))
          self.refreshToken == nil &&
          [[(TJDropboxCredential *)object accessToken] isEqual:self.accessToken]);
     }
-    return object;
+    return NO;
 }
 
 - (void)performSynchronized:(dispatch_block_t)block {
