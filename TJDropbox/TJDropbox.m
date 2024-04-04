@@ -803,7 +803,9 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         return _listFolderRequest(path, credential.accessToken, cursor, includeDeleted);
     },
                        ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
-        if (!error) {
+        NSArray *const files = [parsedResponse objectForKey:@"entries"];
+        id hasMoreObject = [parsedResponse objectForKey:@"has_more"];
+        if (!error && files != nil && hasMoreObject != nil) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
             NSArray *newlyAccumulatedFiles;
             
@@ -813,7 +815,6 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                 newlyAccumulatedFiles = nil;
             }
             
-            id hasMoreObject = [parsedResponse objectForKey:@"has_more"];
             BOOL hasMore = [hasMoreObject respondsToSelector:@selector(boolValue)] ? [hasMoreObject boolValue] : NO;
             NSString *const cursor = [parsedResponse objectForKey:@"cursor"];
             
