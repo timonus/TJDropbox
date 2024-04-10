@@ -805,7 +805,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                        ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         NSArray *const files = [parsedResponse objectForKey:@"entries"];
         id hasMoreObject = [parsedResponse objectForKey:@"has_more"];
-        if (!error && files != nil && hasMoreObject != nil) {
+        if (!error && files != nil && [hasMoreObject isKindOfClass:[NSNumber class]]) {
             NSArray *const files = [parsedResponse objectForKey:@"entries"];
             NSArray *newlyAccumulatedFiles;
             
@@ -813,25 +813,26 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                 newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
             } else {
                 newlyAccumulatedFiles = nil;
+                completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:3 userInfo:nil]);
+                return;
             }
             
-            BOOL hasMore = [hasMoreObject respondsToSelector:@selector(boolValue)] ? [hasMoreObject boolValue] : NO;
-            NSString *const cursor = [parsedResponse objectForKey:@"cursor"];
-            
+            const BOOL hasMore = [(NSNumber *)hasMoreObject boolValue];
             if (hasMore) {
+                NSString *const cursor = [parsedResponse objectForKey:@"cursor"];
                 if ([cursor isKindOfClass:[NSString class]]) {
                     // Fetch next page
                     [self listFolderWithPath:path credential:credential cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
-                    completion(nil, nil, error);
+                    completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:1 userInfo:nil]);
                 }
             } else {
                 // All files fetched, finish.
                 completion(newlyAccumulatedFiles, cursor, error);
             }
         } else {
-            completion(nil, nil, error);
+            completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:2 userInfo:nil]);
         }
     });
 }
