@@ -796,11 +796,11 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
     [self listFolderWithPath:path credential:credential cursor:cursor includeDeleted:includeDeleted accumulatedFiles:nil completion:completion];
 }
 
-+ (void)listFolderWithPath:(NSString *const)path credential:(TJDropboxCredential *const)credential cursor:(NSString *const)cursor includeDeleted:(const BOOL)includeDeleted accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
++ (void)listFolderWithPath:(NSString *const)path credential:(TJDropboxCredential *const)credential cursor:(NSString *const)inCursor includeDeleted:(const BOOL)includeDeleted accumulatedFiles:(NSArray *const)accumulatedFiles completion:(void (^const)(NSArray<NSDictionary *> *_Nullable entries, NSString *_Nullable cursor, NSError *_Nullable error))completion
 {
     _performAPIRequest(credential,
                        ^NSURLRequest *{
-        return _listFolderRequest(path, credential.accessToken, cursor, includeDeleted);
+        return _listFolderRequest(path, credential.accessToken, inCursor, includeDeleted);
     },
                        ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
         NSArray *const files = [parsedResponse objectForKey:@"entries"];
@@ -818,18 +818,19 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             }
             
             const BOOL hasMore = [(NSNumber *)hasMoreObject boolValue];
+            const id outCursorObject = [parsedResponse objectForKey:@"cursor"];
+            NSString *const outCursor = [outCursorObject isKindOfClass:[NSString class]] ? outCursorObject : nil;
             if (hasMore) {
-                NSString *const cursor = [parsedResponse objectForKey:@"cursor"];
-                if ([cursor isKindOfClass:[NSString class]]) {
+                if (outCursor) {
                     // Fetch next page
-                    [self listFolderWithPath:path credential:credential cursor:cursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
+                    [self listFolderWithPath:path credential:credential cursor:outCursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
                     completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:1 userInfo:nil]);
                 }
             } else {
                 // All files fetched, finish.
-                completion(newlyAccumulatedFiles, cursor, error);
+                completion(newlyAccumulatedFiles, outCursor, error);
             }
         } else {
             completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:2 userInfo:nil]);
