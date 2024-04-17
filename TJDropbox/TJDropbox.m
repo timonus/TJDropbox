@@ -776,6 +776,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         [parameters setObject:cursor forKey:@"cursor"];
     } else {
         [parameters setObject:_asciiEncodeString(filePath) forKey:@"path"];
+        [parameters setObject:@NO forKey:@"include_non_downloadable_files"];
         if (includeDeleted) {
             [parameters setObject:@YES forKey:@"include_deleted"];
         }
