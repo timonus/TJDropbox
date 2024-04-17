@@ -622,7 +622,6 @@ static void _addTask(TJDropboxCredential *credential,
         [credential performSynchronized:^{
             if (credential.expirationDate != nil && credential.expirationDate.timeIntervalSinceNow < 600.0) { // Refresh if there are fewer than 10 minutes until expiration
                 void (^refreshCompletionBlock)(NSDictionary *, NSError *) = ^(NSDictionary *parsedResponse, NSError *error) {
-                    credential.refreshCompletionBlocks = nil;
                     if (error) {
                         refreshErrorCompletion(parsedResponse, error);
                     } else {
@@ -637,6 +636,7 @@ static void _addTask(TJDropboxCredential *credential,
                         for (void (^block)(NSDictionary *, NSError *) in credential.refreshCompletionBlocks) {
                             block(parsedResponse, error);
                         }
+                        credential.refreshCompletionBlocks = nil;
                     });
                 }
                 runBlock = NO;
