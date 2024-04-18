@@ -568,6 +568,7 @@ static NSMutableURLRequest *_apiRequest(NSString *const path, NSString *const ac
 {
     NSMutableURLRequest *const request = _baseRequest(@"https://api.dropboxapi.com", path, accessToken);
     request.HTTPBody = [_parameterStringForParameters(parameters) dataUsingEncoding:NSUTF8StringEncoding];
+    request.cachePolicy = NSURLRequestReloadIgnoringLocalAndRemoteCacheData;
     
     if (request.HTTPBody != nil) {
         [request addValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
