@@ -1212,7 +1212,7 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
 {
     _performAPIRequest(credential,
                        ^NSURLRequest *{
-        // NOTE: create_shared_link has been deprecated, will likely be removed by Dropbox at some point. https://goo.gl/ZSrxRN
+        // NOTE: create_shared_link has been deprecated, will likely be removed by Dropbox at some point. https://tijo.link/mluVlJ
         NSString *const requestPath = linkType == TJDropboxSharedLinkTypeShort || uploadOrSaveInProgress ? @"/2/sharing/create_shared_link" : @"/2/sharing/create_shared_link_with_settings";
         NSMutableDictionary *parameters = [NSMutableDictionary new];
         [parameters setObject:_asciiEncodeString(path) forKey:@"path"];
