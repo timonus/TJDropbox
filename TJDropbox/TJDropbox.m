@@ -392,7 +392,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
         NSString *const accessToken = parsedResponse[@"access_token"];
         NSString *const refreshToken = parsedResponse[@"refresh_token"];
         const id expiresInValue = parsedResponse[@"expires_in"];
-        NSDate *const expirationDate = expiresInValue ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
+        NSDate *const expirationDate = expiresInValue != nil ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
         completion([[TJDropboxCredential alloc] initPrivateWithAccessToken:accessToken
                                                               refreshToken:refreshToken
                                                             expirationDate:expirationDate
@@ -462,7 +462,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                              [NSURLQueryItem queryItemWithName:@"s" value:@""],
                              [NSURLQueryItem queryItemWithName:@"state" value:stateString],
                              // Following params only apply if verifier is supplied https://bit.ly/37OmYmh
-                             extraQueryParams ? [NSURLQueryItem queryItemWithName:@"extra_query_params" value:extraQueryParams] : nil,
+                             extraQueryParams != nil ? [NSURLQueryItem queryItemWithName:@"extra_query_params" value:extraQueryParams] : nil,
                              nil
                              ];
     return components.URL;
@@ -483,7 +483,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
             // Note: It seems that you cannot get refresh tokens from app-to-app auth.
         }
     }
-    return accessToken ? [[TJDropboxCredential alloc] initWithAccessToken:accessToken] : nil;
+    return accessToken != nil ? [[TJDropboxCredential alloc] initWithAccessToken:accessToken] : nil;
 }
 
 + (void)revokeCredential:(TJDropboxCredential *const)credential withCallback:(void (^const)(BOOL success, NSError *_Nullable error))completion
@@ -508,7 +508,7 @@ static NSString *_asciiEncodeString(NSString *const string)
     // Useful: https://www.objc.io/issues/9-strings/unicode/
     
     const NSUInteger stringLength = string.length;
-    NSMutableString *const result = string ? [NSMutableString stringWithCapacity:stringLength] : nil;
+    NSMutableString *const result = string != nil ? [NSMutableString stringWithCapacity:stringLength] : nil;
     
     for (NSUInteger i = 0; i < stringLength; i++) {
         const unichar character = [string characterAtIndex:i];
@@ -688,7 +688,7 @@ static void _refreshCredential(TJDropboxCredential *const credential, void (^com
         
         NSString *const accessToken = parsedResponse[@"access_token"];
         const id expiresInValue = parsedResponse[@"expires_in"];
-        NSDate *const expirationDate = expiresInValue ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
+        NSDate *const expirationDate = expiresInValue != nil ? [NSDate dateWithTimeIntervalSinceNow:[expiresInValue doubleValue]] : nil;
         if (accessToken && expirationDate) {
             [credential performSynchronized:^{
                 credential.accessToken = accessToken;
@@ -815,7 +815,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                 newlyAccumulatedFiles = accumulatedFiles.count > 0 ? [accumulatedFiles arrayByAddingObjectsFromArray:files] : files;
             } else {
                 newlyAccumulatedFiles = nil;
-                completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:3 userInfo:nil]);
+                completion(nil, nil, error != nil ? error : [NSError errorWithDomain:TJDropboxErrorDomain code:3 userInfo:nil]);
                 return;
             }
             
@@ -828,14 +828,14 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                     [self listFolderWithPath:path credential:credential cursor:outCursor includeDeleted:includeDeleted accumulatedFiles:newlyAccumulatedFiles completion:completion];
                 } else {
                     // We can't load more without a cursor
-                    completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:1 userInfo:nil]);
+                    completion(nil, nil, error != nil ? error : [NSError errorWithDomain:TJDropboxErrorDomain code:1 userInfo:nil]);
                 }
             } else {
                 // All files fetched, finish.
                 completion(newlyAccumulatedFiles, outCursor, error);
             }
         } else {
-            completion(nil, nil, error ?: [NSError errorWithDomain:TJDropboxErrorDomain code:2 userInfo:nil]);
+            completion(nil, nil, error != nil ? error : [NSError errorWithDomain:TJDropboxErrorDomain code:2 userInfo:nil]);
         }
     });
 }
