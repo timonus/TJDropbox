@@ -9,6 +9,7 @@
 #import "TJDropbox.h"
 #import <CommonCrypto/CommonDigest.h>
 #import <os/lock.h>
+#import <zlib.h>
 
 NSString *const TJDropboxErrorDomain = @"TJDropboxErrorDomain";
 NSString *const TJDropboxErrorUserInfoKeyResponse = @"response";
@@ -564,6 +565,56 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     return request;
 }
 
+// Thanks Claude https://tijo.link/BGdVNx
+static NSData *_gzipCompressData(NSData *const data, NSError **error) {
+   if (!data.length) {
+       if (error) {
+           *error = [NSError errorWithDomain:@"CompressionErrorDomain" code:1
+               userInfo:@{NSLocalizedDescriptionKey: @"Invalid input data"}];
+       }
+       return nil;
+   }
+   
+   z_stream strm;
+   strm.zalloc = Z_NULL;
+   strm.zfree = Z_NULL;
+   strm.opaque = Z_NULL;
+   
+   // Initialize deflate with gzip format
+   if (deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+       if (error) {
+           *error = [NSError errorWithDomain:@"CompressionErrorDomain" code:2
+               userInfo:@{NSLocalizedDescriptionKey: @"Failed to initialize compression"}];
+       }
+       return nil;
+   }
+   
+   // Set up input
+   strm.avail_in = (uInt)data.length;
+   strm.next_in = (Bytef *)data.bytes;
+   
+   // Prepare output buffer (compress can increase size)
+   NSMutableData *compressedData = [NSMutableData dataWithLength:data.length * 1.1 + 12];
+   strm.avail_out = (uInt)compressedData.length;
+   strm.next_out = compressedData.mutableBytes;
+   
+   // Compress
+   if (deflate(&strm, Z_FINISH) != Z_STREAM_END) {
+       deflateEnd(&strm);
+       if (error) {
+           *error = [NSError errorWithDomain:@"CompressionErrorDomain" code:3
+               userInfo:@{NSLocalizedDescriptionKey: @"Compression failed"}];
+       }
+       return nil;
+   }
+   
+   // Cleanup and finalize
+   [compressedData setLength:strm.total_out];
+   deflateEnd(&strm);
+   
+   return compressedData;
+}
+
 static NSMutableURLRequest *_apiRequest(NSString *const path, NSString *const accessToken, NSDictionary<NSString *, id> *const parameters)
 {
     NSMutableURLRequest *const request = _baseRequest(@"https://api.dropboxapi.com", path, accessToken);
@@ -919,9 +970,20 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         if (muteDesktopNotifications) {
             parameters[@"mute"] = @YES;
         }
-        NSURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
+        NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
         
-        NSURLSessionUploadTask *const task = [_session() uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
+        NSData *const data = [NSData dataWithContentsOfFile:localPath];
+        NSData *const compressedData = _gzipCompressData(data, nil); // TODO: We should probably limit this based on file size & RAM
+        
+        NSURLSessionUploadTask *task;
+        if (compressedData.length < data.length) {
+            [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
+            [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
+            task = [_session() uploadTaskWithRequest:request fromData:compressedData];
+        } else {
+            task = [_session() uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
+        }
+        
         if (@available(iOS 14.5, macOS 11.3, *)) {
             if (!progressBlock) {
                 task.prefersIncrementalDelivery = NO;
