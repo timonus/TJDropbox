@@ -973,10 +973,11 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
         
         NSData *const data = [NSData dataWithContentsOfFile:localPath];
-        NSData *const compressedData = _gzipCompressData(data, nil); // TODO: We should probably limit this based on file size & RAM
+        NSError *error;
+        NSData *const compressedData = _gzipCompressData(data, &error); // TODO: We should probably limit this based on file size & RAM
         
         NSURLSessionUploadTask *task;
-        if (compressedData.length < data.length) {
+        if (error == nil && compressedData.length > 0 && compressedData.length < data.length) {
             [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
             [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
             task = [_session() uploadTaskWithRequest:request fromData:compressedData];
