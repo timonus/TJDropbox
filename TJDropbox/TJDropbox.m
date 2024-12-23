@@ -985,6 +985,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             task = [_session() uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
         }
         
+        task.priority = NSURLSessionTaskPriorityHigh;
+        
         if (@available(iOS 14.5, macOS 11.3, *)) {
             if (!progressBlock) {
                 task.prefersIncrementalDelivery = NO;
