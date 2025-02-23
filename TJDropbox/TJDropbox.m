@@ -288,7 +288,7 @@ __attribute__((objc_direct_members))
 
 #pragma mark - Authentication
 
-// Copied from https://bit.ly/2NeKGi2
+// Copied from https://tijo.link/k2OViy
 static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
 {
   // Creates code challenge according to [RFC7636 4.2] (https://tools.ietf.org/html/rfc7636#section-4.2)
@@ -372,7 +372,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                 completion:(void (^const)(TJDropboxCredential *_Nullable, NSError *_Nullable))completion
 {
     // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
-    // https://bit.ly/3fKbMd3
+    // https://tijo.link/BmeoVo
     
     _performAPIRequest(nil,
                        ^NSURLRequest *{
@@ -462,7 +462,7 @@ static NSString *_codeChallengeFromCodeVerifier(NSString *const codeVerifier)
                              [NSURLQueryItem queryItemWithName:@"k" value:clientIdentifier],
                              [NSURLQueryItem queryItemWithName:@"s" value:@""],
                              [NSURLQueryItem queryItemWithName:@"state" value:stateString],
-                             // Following params only apply if verifier is supplied https://bit.ly/37OmYmh
+                             // Following params only apply if verifier is supplied https://tijo.link/QObA8d
                              extraQueryParams != nil ? [NSURLQueryItem queryItemWithName:@"extra_query_params" value:extraQueryParams] : nil,
                              nil
                              ];
@@ -723,7 +723,7 @@ static void _refreshCredential(TJDropboxCredential *const credential, void (^com
     _performAPIRequest(nil,
                        ^NSURLRequest *{
         // https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
-        // https://bit.ly/3fKbMd3
+        // https://tijo.link/BmeoVo
         NSMutableURLRequest *const request = _apiRequest(@"/oauth2/token", nil, nil);
         NSURLComponents *const components = [NSURLComponents new];
         components.queryItems = @[
