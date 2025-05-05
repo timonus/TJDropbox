@@ -1304,7 +1304,6 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
             if (linkType == TJDropboxSharedLinkTypeDirect) {
                 components.host = @"dl.dropboxusercontent.com";
             } else if (linkType == TJDropboxSharedLinkTypeDefault) {
-                components.path = components.path.stringByDeletingLastPathComponent;
                 components.host = [components.host stringByReplacingOccurrencesOfString:@"www." withString:@""];
             }
             urlString = components.URL.absoluteString;
