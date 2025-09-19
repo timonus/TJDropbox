@@ -1286,7 +1286,7 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
             [parameters setObject:@YES forKey:@"short_url"];
         }
         if (uploadOrSaveInProgress) {
-            if (linkType == TJDropboxSharedLinkTypeDirect) {
+            if (linkType == TJDropboxSharedLinkTypeDirect || linkType == TJDropboxSharedLinkTypeDirectDownload) {
                 NSLog(@"[TJDropbox] - Warning in %s: uploadOrSaveInProgress is not compatible with TJDropboxSharedLinkTypeDirect. Parameter is being ignored.", __PRETTY_FUNCTION__);
             } else {
                 [parameters setObject:@"file" forKey:@"pending_upload"];
@@ -1301,8 +1301,17 @@ static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const s
         }
         if (urlString.length > 0) {
             NSURLComponents *const components = [NSURLComponents componentsWithString:urlString];
-            if (linkType == TJDropboxSharedLinkTypeDirect) {
-                components.host = @"dl.dropboxusercontent.com";
+            if (linkType == TJDropboxSharedLinkTypeDirect || linkType == TJDropboxSharedLinkTypeDirectDownload) {
+                NSMutableArray<NSURLQueryItem *> *items = [NSMutableArray arrayWithArray:components.queryItems];
+                [items filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSURLQueryItem  *_Nullable evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+                    return ![evaluatedObject.name isEqualToString:@"dl"];
+                }]];
+                if (linkType == TJDropboxSharedLinkTypeDirect) {
+                    [items addObject:[NSURLQueryItem queryItemWithName:@"raw" value:@"1"]];
+                } else if (linkType == TJDropboxSharedLinkTypeDirectDownload) {
+                    [items addObject:[NSURLQueryItem queryItemWithName:@"dl" value:@"1"]];
+                }
+                components.queryItems = items;
             } else if (linkType == TJDropboxSharedLinkTypeDefault) {
                 components.host = [components.host stringByReplacingOccurrencesOfString:@"www." withString:@""];
             }

@@ -29,7 +29,8 @@ extern NSNotificationName const TJDropboxCredentialDidRefreshAccessTokenNotifica
 typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxSharedLinkType) {
     TJDropboxSharedLinkTypeDefault,
     TJDropboxSharedLinkTypeShort, // Uses deprecated endpoint to generate db.tt links
-    TJDropboxSharedLinkTypeDirect // Changes result hosts to dl.dropboxusercontent.com
+    TJDropboxSharedLinkTypeDirect,
+    TJDropboxSharedLinkTypeDirectDownload,
 };
 
 typedef NS_CLOSED_ENUM(NSUInteger, TJDropboxThumbnailSize) {
