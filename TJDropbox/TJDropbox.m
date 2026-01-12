@@ -656,6 +656,13 @@ static NSURLSession *_session(void)
         configuration.shouldUseExtendedBackgroundIdleMode = YES; // Allows requests to run better when the app is backgrounded https://twitter.com/BigZaphod/status/1164977540479553543
         configuration.waitsForConnectivity = YES;
         configuration.timeoutIntervalForResource = 60;
+        
+        if (@available(iOS 18.4, *)) {
+            configuration.usesClassicLoadingMode = NO;
+            if (@available(iOS 26.0, *)) {
+                configuration.enablesEarlyData = YES;
+            }
+        }
         session = [NSURLSession sessionWithConfiguration:configuration delegate:taskDelegate delegateQueue:taskDelegate.serialOperationQueue];
     });
     return session;
