@@ -664,6 +664,7 @@ static NSURLSession *_session(void)
             }
         }
         session = [NSURLSession sessionWithConfiguration:configuration delegate:taskDelegate delegateQueue:taskDelegate.serialOperationQueue];
+        session.sessionDescription = @"TJDropbox";
     });
     return session;
 }
