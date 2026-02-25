@@ -979,6 +979,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             parameters[@"mute"] = @YES;
         }
         NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
+        [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
         
         NSData *const data = [NSData dataWithContentsOfFile:localPath];
         NSError *error;
@@ -987,7 +988,6 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         NSURLSessionUploadTask *task;
         if (error == nil && compressedData.length > 0 && compressedData.length < data.length) {
             [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
-            [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
             task = [_session() uploadTaskWithRequest:request fromData:compressedData];
         } else {
             task = [_session() uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:localPath isDirectory:NO]];
