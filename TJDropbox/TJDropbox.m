@@ -657,9 +657,9 @@ static NSURLSession *_session(void)
         configuration.waitsForConnectivity = YES;
         configuration.timeoutIntervalForResource = 60;
         
-        if (@available(iOS 18.4, *)) {
+        if (@available(iOS 18.4, macOS 15.4, *)) {
             configuration.usesClassicLoadingMode = NO;
-            if (@available(iOS 26.0, *)) {
+            if (@available(iOS 26.0, macOS 26.0, *)) {
                 configuration.enablesEarlyData = YES;
             }
         }
