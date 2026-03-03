@@ -1068,7 +1068,7 @@ static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long file
                                                              });
         [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
         
-        NSData *const compressedChunk = _gzipCompressData(chunk, nil);
+        NSData *const compressedChunk = _gzipCompressData(chunk, nil); // TODO: It would be neat to parallelize this with the uploads.
         if ([compressedChunk length] < [chunk length]) {
             chunk = compressedChunk;
             [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
