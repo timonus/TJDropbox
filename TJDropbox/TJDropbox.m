@@ -1054,7 +1054,7 @@ static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long file
              ^NSURLSessionTask *{
         const unsigned long long offset = fileHandle.offsetInFile;
         static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
-        NSData *const chunk = [fileHandle readDataOfLength:kChunkSize];
+        NSData *chunk = [fileHandle readDataOfLength:kChunkSize];
         NSUInteger chunkLength = [chunk length];
         const BOOL isLastChunk = chunkLength < kChunkSize;
         
@@ -1068,6 +1068,11 @@ static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long file
                                                              });
         [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
         
+        NSData *const compressedChunk = _gzipCompressData(chunk, nil);
+        if ([compressedChunk length] < [chunk length]) {
+            chunk = compressedChunk;
+            [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
+        }
         NSURLSessionUploadTask *const task = [_session() uploadTaskWithRequest:request fromData:chunk];
         
         void (^totalProgressBlock)(CGFloat);
