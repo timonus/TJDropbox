@@ -281,6 +281,76 @@ __attribute__((objc_direct_members))
 
 @end
 
+@interface TJDropboxOperation : NSOperation
+
+- (instancetype)initWithStartBlock:(void (^)(TJDropboxOperation *))startBlock NS_DESIGNATED_INITIALIZER;
+- (instancetype)init NS_UNAVAILABLE;
+- (void)finish;
+
+@property (nonatomic, copy) void (^startBlock)(TJDropboxOperation *);
+
+@end
+
+#if defined(__has_attribute) && __has_attribute(objc_direct_members)
+__attribute__((objc_direct_members))
+#endif
+@implementation TJDropboxOperation
+
+@synthesize finished = _finished;
+@synthesize executing = _executing;
+
+- (instancetype)initWithStartBlock:(void (^)(TJDropboxOperation *))startBlock
+{
+    if (self = [super init]) {
+        self.startBlock = startBlock;
+    }
+    return self;
+}
+
+- (void)start
+{
+    if (self.isCancelled) {
+        // Don't start if cancelled
+        // https://developer.apple.com/documentation/foundation/nsoperation?language=objc#1661262?language=objc
+        // We do however need to finish it in this case, otherwise the operation isn't purged from its parent queue.
+        NSString *const finishedSelector = NSStringFromSelector(@selector(isFinished));
+        [self willChangeValueForKey:finishedSelector];
+        _finished = YES;
+        [self didChangeValueForKey:finishedSelector];
+    } else {
+        self.startBlock(self);
+        
+        if (!_finished) {
+            NSString *const executingSelector = NSStringFromSelector(@selector(isExecuting));
+            [self willChangeValueForKey:executingSelector];
+            _executing = YES;
+            [self didChangeValueForKey:executingSelector];
+        }
+    }
+    self.startBlock = nil;
+}
+
+- (void)finish
+{
+    NSString *const executingSelector = NSStringFromSelector(@selector(isExecuting));
+    [self willChangeValueForKey:executingSelector];
+    _executing = NO;
+    [self didChangeValueForKey:executingSelector];
+    
+    NSString *const finishedSelector = NSStringFromSelector(@selector(isFinished));
+    [self willChangeValueForKey:finishedSelector];
+    _finished = YES;
+    [self didChangeValueForKey:finishedSelector];
+}
+
+- (BOOL)isAsynchronous
+{
+    return YES;
+}
+
+@end
+
+
 #if defined(__has_attribute) && __has_attribute(objc_direct_members)
 __attribute__((objc_direct_members))
 #endif
@@ -1034,9 +1104,107 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                 NSFileHandle *const fileHandle = [NSFileHandle fileHandleForReadingAtPath:localPath];
                 
                 unsigned long long fileSize = [fileHandle seekToEndOfFile];
-                [fileHandle seekToFileOffset:0];
                 
-                _uploadChunk(fileHandle, fileSize, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, credential, progressBlock, completion);
+                NSOperationQueue *queue = [NSOperationQueue new];
+                queue.maxConcurrentOperationCount = 4;
+                
+                NSMutableArray<NSBlockOperation *> *dataOperations;
+                NSMutableArray<NSOperation *> *uploadOperations;
+                
+                static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
+                for (unsigned long long offset = 0; ; offset += kChunkSize) {
+                    const BOOL isLastChunk = offset + kChunkSize >= fileSize;
+                    
+                    __block NSData *chunk = nil;
+                    __block NSUInteger chunkLength = 0;
+                    __block BOOL isGzipped = NO;
+                    NSBlockOperation *dataOperation = [NSBlockOperation blockOperationWithBlock:^{
+                        if ([fileHandle seekToOffset:offset error:nil]) {
+                            chunk = [fileHandle readDataOfLength:kChunkSize];
+                            chunkLength = [chunk length];
+                            NSData *const compressedChunk = _gzipCompressData(chunk, nil);
+                            if ([compressedChunk length] < [chunk length]) {
+                                chunk = compressedChunk;
+                                isGzipped = YES;
+                            }
+                        }
+                    }];
+                    
+                    [dataOperations addObject:dataOperation];
+                    if (uploadOperations.count > 1) {
+                        [dataOperation addDependency:[uploadOperations objectAtIndex:uploadOperations.count - 2]]; // TODO: Is index right?
+                    }
+                    
+                    NSOperation *uploadOperation = [[TJDropboxOperation alloc] initWithStartBlock:^(TJDropboxOperation *operation) {
+                            _addTask(credential,
+                                     ^NSURLSessionTask *{
+                                NSMutableURLRequest *const uploadRequest = _contentRequest(@"/2/files/upload_session/append_v2", credential.accessToken,
+                                                                                     @{
+                                    @"cursor": @{
+                                        @"session_id": sessionIdentifier,
+                                        @"offset": @(offset)
+                                    },
+                                    @"close": @(isLastChunk)
+                                });
+                                [uploadRequest addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
+                                if (isGzipped) {
+                                    [uploadRequest setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
+                                }
+                                NSURLSessionUploadTask *const uploadTask = [_session() uploadTaskWithRequest:uploadRequest fromData:chunk];
+                                
+                                void (^totalProgressBlock)(CGFloat);
+                                if (progressBlock) {
+                                    totalProgressBlock = ^(CGFloat progress) {
+                                        unsigned long long totalBytesRead = offset + chunkLength * progress;
+                                        CGFloat totalProgress = (CGFloat)totalBytesRead / fileSize;
+                                        progressBlock(totalProgress);
+                                    };
+                                } else {
+                                    totalProgressBlock = nil;
+                                }
+                                
+                                if (@available(iOS 14.5, macOS 11.3, *)) {
+                                    if (!totalProgressBlock) {
+                                        uploadTask.prefersIncrementalDelivery = NO;
+                                    }
+                                }
+                                
+                                [_taskDelegate() setProgressBlock:totalProgressBlock
+                                                  completionBlock:^(NSData * _Nullable uploadData, NSURLResponse * _Nullable uploadResponse, NSError * _Nullable uploadError) {
+                                    NSDictionary *uploadParsedResult = nil;
+                                    _processResult(uploadData, uploadResponse, &uploadError, &uploadParsedResult);
+                                    
+                                    if (uploadError && [(NSHTTPURLResponse *)uploadResponse statusCode] != 200) {
+                                        // Error encountered
+                                        [queue cancelAllOperations];
+                                        completion(uploadParsedResult, error);
+                                    }
+                                    
+                                    [operation finish];
+                                }
+                                                      forDataTask:uploadTask];
+                                
+                                return uploadTask;
+                            },
+                                     completion);
+                    }];
+                    
+                    [uploadOperation addDependency:dataOperation];
+                    [uploadOperations addObject:uploadOperation];
+                    
+                    if (isLastChunk) {
+                        break;
+                    }
+                }
+                
+                NSOperation *finishOperation = [NSBlockOperation blockOperationWithBlock:^{
+                    _finishLargeUpload(fileHandle, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, credential, completion);
+                }];
+                [finishOperation addDependency:uploadOperations.lastObject];
+                
+                [queue addOperations:[[(NSArray<NSOperation *> *)dataOperations arrayByAddingObjectsFromArray:uploadOperations] arrayByAddingObject:finishOperation]
+                   waitUntilFinished:NO];
+                
             } else {
                 completion(parsedResult, error);
             }
@@ -1047,70 +1215,70 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
              completion);
 }
 
-static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long fileSize, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, TJDropboxCredential *credential, void (^progressBlock)(CGFloat progress), void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
-{
-    _addTask(credential,
-             ^NSURLSessionTask *{
-        const unsigned long long offset = fileHandle.offsetInFile;
-        static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
-        NSData *chunk = [fileHandle readDataOfLength:kChunkSize];
-        NSUInteger chunkLength = [chunk length];
-        const BOOL isLastChunk = chunkLength < kChunkSize;
-        
-        NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload_session/append_v2", credential.accessToken,
-                                                             @{
-                                                                 @"cursor": @{
-                                                                         @"session_id": sessionIdentifier,
-                                                                         @"offset": @(offset)
-                                                                 },
-                                                                 @"close": @(isLastChunk)
-                                                             });
-        [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
-        
-        NSData *const compressedChunk = _gzipCompressData(chunk, nil); // TODO: It would be neat to parallelize this with the uploads.
-        if ([compressedChunk length] < [chunk length]) {
-            chunk = compressedChunk;
-            [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
-        }
-        NSURLSessionUploadTask *const task = [_session() uploadTaskWithRequest:request fromData:chunk];
-        
-        void (^totalProgressBlock)(CGFloat);
-        if (progressBlock) {
-            totalProgressBlock = ^(CGFloat progress) {
-                unsigned long long totalBytesRead = offset + chunkLength * progress;
-                CGFloat totalProgress = (CGFloat)totalBytesRead / fileSize;
-                progressBlock(totalProgress);
-            };
-        } else {
-            totalProgressBlock = nil;
-        }
-        
-        if (@available(iOS 14.5, macOS 11.3, *)) {
-            if (!totalProgressBlock) {
-                task.prefersIncrementalDelivery = NO;
-            }
-        }
-        [_taskDelegate() setProgressBlock:totalProgressBlock
-                          completionBlock:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-            NSDictionary *parsedResult = nil;
-            _processResult(data, response, &error, &parsedResult);
-            
-            if (error && [(NSHTTPURLResponse *)response statusCode] != 200) {
-                // Error encountered
-                completion(parsedResult, error);
-            } else if (isLastChunk) {
-                // Finish the upload
-                _finishLargeUpload(fileHandle, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, credential, completion);
-            } else {
-                // Upload next chunk
-                _uploadChunk(fileHandle, fileSize, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, credential, progressBlock, completion);
-            }
-        }
-                              forDataTask:task];
-        return task;
-    },
-             completion);
-}
+//static void _uploadChunk(NSFileHandle *const fileHandle, unsigned long long fileSize, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, TJDropboxCredential *credential, void (^progressBlock)(CGFloat progress), void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
+//{
+//    _addTask(credential,
+//             ^NSURLSessionTask *{
+//        const unsigned long long offset = fileHandle.offsetInFile;
+//        static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
+//        NSData *chunk = [fileHandle readDataOfLength:kChunkSize];
+//        NSUInteger chunkLength = [chunk length];
+//        const BOOL isLastChunk = chunkLength < kChunkSize;
+//        
+//        NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload_session/append_v2", credential.accessToken,
+//                                                             @{
+//                                                                 @"cursor": @{
+//                                                                         @"session_id": sessionIdentifier,
+//                                                                         @"offset": @(offset)
+//                                                                 },
+//                                                                 @"close": @(isLastChunk)
+//                                                             });
+//        [request addValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
+//        
+//        NSData *const compressedChunk = _gzipCompressData(chunk, nil); // TODO: It would be neat to parallelize this with the uploads.
+//        if ([compressedChunk length] < [chunk length]) {
+//            chunk = compressedChunk;
+//            [request setValue:@"gzip" forHTTPHeaderField:@"Content-Encoding"];
+//        }
+//        NSURLSessionUploadTask *const task = [_session() uploadTaskWithRequest:request fromData:chunk];
+//        
+//        void (^totalProgressBlock)(CGFloat);
+//        if (progressBlock) {
+//            totalProgressBlock = ^(CGFloat progress) {
+//                unsigned long long totalBytesRead = offset + chunkLength * progress;
+//                CGFloat totalProgress = (CGFloat)totalBytesRead / fileSize;
+//                progressBlock(totalProgress);
+//            };
+//        } else {
+//            totalProgressBlock = nil;
+//        }
+//        
+//        if (@available(iOS 14.5, macOS 11.3, *)) {
+//            if (!totalProgressBlock) {
+//                task.prefersIncrementalDelivery = NO;
+//            }
+//        }
+//        [_taskDelegate() setProgressBlock:totalProgressBlock
+//                          completionBlock:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+//            NSDictionary *parsedResult = nil;
+//            _processResult(data, response, &error, &parsedResult);
+//            
+//            if (error && [(NSHTTPURLResponse *)response statusCode] != 200) {
+//                // Error encountered
+//                completion(parsedResult, error);
+//            } else if (isLastChunk) {
+//                // Finish the upload
+//                _finishLargeUpload(fileHandle, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, credential, completion);
+//            } else {
+//                // Upload next chunk
+//                _uploadChunk(fileHandle, fileSize, sessionIdentifier, remotePath, overwriteExisting, muteDesktopNotifications, credential, progressBlock, completion);
+//            }
+//        }
+//                              forDataTask:task];
+//        return task;
+//    },
+//             completion);
+//}
 
 static void _finishLargeUpload(NSFileHandle *const fileHandle, NSString *const sessionIdentifier, NSString *const remotePath, const BOOL overwriteExisting, const BOOL muteDesktopNotifications, TJDropboxCredential *const credential, void (^completion)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))
 {
