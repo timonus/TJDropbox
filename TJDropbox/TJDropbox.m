@@ -867,7 +867,6 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         NSArray *const files = [parsedResponse objectForKey:@"entries"];
         id hasMoreObject = [parsedResponse objectForKey:@"has_more"];
         if (!error && files != nil && [hasMoreObject isKindOfClass:[NSNumber class]]) {
-            NSArray *const files = [parsedResponse objectForKey:@"entries"];
             NSArray *newlyAccumulatedFiles;
             
             if ([files isKindOfClass:[NSArray class]]) {
