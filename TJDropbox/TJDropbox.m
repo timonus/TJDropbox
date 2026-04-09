@@ -1190,6 +1190,9 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                     }];
                     
                     [uploadOperation addDependency:dataOperation];
+                    if (uploadOperations.count > 0) {
+                        [uploadOperation addDependency:[uploadOperations lastObject]];
+                    }
                     [uploadOperations addObject:uploadOperation];
                     
                     if (isLastChunk) {
