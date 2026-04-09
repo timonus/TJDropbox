@@ -1108,8 +1108,8 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                 NSOperationQueue *queue = [NSOperationQueue new];
                 queue.maxConcurrentOperationCount = 4;
                 
-                NSMutableArray<NSBlockOperation *> *dataOperations;
-                NSMutableArray<NSOperation *> *uploadOperations;
+                NSMutableArray<NSBlockOperation *> *dataOperations = [NSMutableArray new];
+                NSMutableArray<NSOperation *> *uploadOperations = [NSMutableArray new];
                 
                 static const NSUInteger kChunkSize = 10 * 1024 * 1024; // use 10 MB - same as the official Obj-C Dropbox SDK
                 for (unsigned long long offset = 0; ; offset += kChunkSize) {
