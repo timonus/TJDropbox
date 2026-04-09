@@ -1177,7 +1177,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
                                     if (uploadError && [(NSHTTPURLResponse *)uploadResponse statusCode] != 200) {
                                         // Error encountered
                                         [queue cancelAllOperations];
-                                        completion(uploadParsedResult, error);
+                                        completion(uploadParsedResult, uploadError);
                                     }
                                     
                                     [operation finish];
