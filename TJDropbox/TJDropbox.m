@@ -122,7 +122,7 @@ __attribute__((objc_direct_members))
     return NO;
 }
 
-- (void)performSynchronized:(dispatch_block_t)block {
+- (void)performSynchronized:(NS_NOESCAPE dispatch_block_t)block {
     os_unfair_lock_lock(&_lock);
     block();
     os_unfair_lock_unlock(&_lock);
