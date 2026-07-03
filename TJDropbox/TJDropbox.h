@@ -69,6 +69,8 @@ __attribute__((objc_direct_members))
 
 @interface TJDropbox : NSObject
 
+@property (nonatomic, nullable, copy, class) void (^requestModifier)(NSMutableURLRequest *);
+
 // Authentication
 
 /// Used to return the URL used to initate OAuth with Dropbox

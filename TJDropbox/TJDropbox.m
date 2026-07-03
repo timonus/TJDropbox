@@ -286,6 +286,18 @@ __attribute__((objc_direct_members))
 #endif
 @implementation TJDropbox
 
+static void (^_tj_requestModifier)(NSMutableURLRequest *);
+
++ (void)setRequestModifier:(void (^)(NSMutableURLRequest * _Nonnull))requestModifier
+{
+    _tj_requestModifier = requestModifier;
+}
+
++ (void (^)(NSMutableURLRequest * _Nonnull))requestModifier
+{
+    return _tj_requestModifier;
+}
+
 #pragma mark - Authentication
 
 // Copied from https://tijo.link/k2OViy
@@ -560,6 +572,11 @@ static NSMutableURLRequest *_baseRequest(NSString *const baseURLString, NSString
     if (accessToken) {
         NSString *const authorization = [NSString stringWithFormat:@"Bearer %@", accessToken];
         [request addValue:authorization forHTTPHeaderField:@"Authorization"];
+    }
+    
+    void (^requestModifier)(NSMutableURLRequest *) = [TJDropbox requestModifier];
+    if (requestModifier != nil) {
+        requestModifier(request);
     }
     
     return request;
