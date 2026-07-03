@@ -714,8 +714,8 @@ static NSURLSession *_session(void)
         TJDropboxURLSessionTaskDelegate *taskDelegate = _taskDelegate();
         NSURLSessionConfiguration *const configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
         configuration.shouldUseExtendedBackgroundIdleMode = YES; // Allows requests to run better when the app is backgrounded https://twitter.com/BigZaphod/status/1164977540479553543
-        configuration.waitsForConnectivity = YES;
-        configuration.timeoutIntervalForResource = 60;
+//        configuration.waitsForConnectivity = YES;
+//        configuration.timeoutIntervalForResource = 60;
         
         if (@available(iOS 18.4, macOS 15.4, *)) {
             configuration.usesClassicLoadingMode = NO;
