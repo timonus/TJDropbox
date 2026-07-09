@@ -632,6 +632,43 @@ static NSData *_gzipCompressData(NSData *const data, NSError **error) {
    return compressedData;
 }
 
+// Computes Dropbox content_hash as specified in https://www.dropbox.com/developers/reference/content-hash
+// The content_hash is computed by dividing the file into 4MB blocks, SHA-256 hashing each block,
+// then SHA-256 hashing the concatenated block hashes, and finally hex-encoding the result.
+static NSString *_dropboxContentHashForFileAtPath(NSString *const filePath) {
+    NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:filePath];
+    if (!fileHandle) {
+        return nil;
+    }
+    
+    static const NSUInteger kBlockSize = 4 * 1024 * 1024; // 4 MB blocks
+    NSMutableData *blockHashes = [NSMutableData new];
+    
+    NSData *block;
+    do {
+        @autoreleasepool {
+            block = [fileHandle readDataOfLength:kBlockSize];
+            
+            // Hash this block
+            unsigned char blockHash[CC_SHA256_DIGEST_LENGTH];
+            CC_SHA256(block.bytes, (CC_LONG)block.length, blockHash);
+            [blockHashes appendBytes:blockHash length:CC_SHA256_DIGEST_LENGTH];
+        }
+    } while (block.length == kBlockSize);
+        
+        // Hash the concatenated block hashes
+    unsigned char finalHash[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(blockHashes.bytes, (CC_LONG)blockHashes.length, finalHash);
+    
+    // Hex encode the result
+    NSMutableString *hexString = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
+    for (NSUInteger i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) {
+        [hexString appendFormat:@"%02x", finalHash[i]];
+    }
+    
+    return hexString;
+}
+
 static NSMutableURLRequest *_apiRequest(NSString *const path, NSString *const accessToken, NSDictionary<NSString *, id> *const parameters)
 {
     NSMutableURLRequest *const request = _baseRequest(@"https://api.dropboxapi.com", path, accessToken);
@@ -994,6 +1031,13 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         if (muteDesktopNotifications) {
             parameters[@"mute"] = @YES;
         }
+        
+        // Compute content_hash for the file
+        NSString *const contentHash = _dropboxContentHashForFileAtPath(localPath);
+        if (contentHash) {
+            parameters[@"content_hash"] = contentHash;
+        }
+        
         NSMutableURLRequest *const request = _contentRequest(@"/2/files/upload", credential.accessToken, parameters);
         [request setValue:@"application/octet-stream" forHTTPHeaderField:@"Content-Type"];
         
