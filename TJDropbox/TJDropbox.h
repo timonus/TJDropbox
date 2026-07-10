@@ -160,6 +160,8 @@ __attribute__((objc_direct_members))
 
 @end
 
+extern NSData *TJDropboxFileContentHash(NSString *const filePath);
+
 #if defined(__has_attribute) && __has_attribute(objc_direct_members)
 __attribute__((objc_direct_members))
 #endif

@@ -635,7 +635,17 @@ static NSData *_gzipCompressData(NSData *const data, NSError **error) {
 // Computes Dropbox content_hash as specified in https://www.dropbox.com/developers/reference/content-hash
 // The content_hash is computed by dividing the file into 4MB blocks, SHA-256 hashing each block,
 // then SHA-256 hashing the concatenated block hashes, and finally hex-encoding the result.
-static NSString *_dropboxContentHashForFileAtPath(NSString *const filePath) {
+static NSString *_dropboxContentHashForData(NSData *const data) {
+    // Hex encode the result
+    NSMutableString *hexString = [NSMutableString stringWithCapacity:data.length * 2];
+    const unsigned char *bytes = data.bytes;
+    for (NSUInteger i = 0; i < data.length; i++) {
+        [hexString appendFormat:@"%02x", bytes[i]];
+    }
+    return hexString;
+}
+
+NSData *TJDropboxFileContentHash(NSString *const filePath) {
     NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:filePath];
     if (!fileHandle) {
         return nil;
@@ -660,13 +670,7 @@ static NSString *_dropboxContentHashForFileAtPath(NSString *const filePath) {
     unsigned char finalHash[CC_SHA256_DIGEST_LENGTH];
     CC_SHA256(blockHashes.bytes, (CC_LONG)blockHashes.length, finalHash);
     
-    // Hex encode the result
-    NSMutableString *hexString = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
-    for (NSUInteger i = 0; i < CC_SHA256_DIGEST_LENGTH; i++) {
-        [hexString appendFormat:@"%02x", finalHash[i]];
-    }
-    
-    return hexString;
+    return [NSData dataWithBytes:finalHash length:CC_SHA256_DIGEST_LENGTH];
 }
 
 static NSMutableURLRequest *_apiRequest(NSString *const path, NSString *const accessToken, NSDictionary<NSString *, id> *const parameters)
@@ -996,7 +1000,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             // Verify content hash matches
             NSString *contentHash = parsedResult[@"content_hash"];
             if (!error && location && contentHash) {
-                if (![contentHash isEqual:_dropboxContentHashForFileAtPath(location.path)]) {
+                if (![contentHash isEqual:_dropboxContentHashForData(TJDropboxFileContentHash(location.path))]) {
                     error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:@{@"description": @"content_hash_mimatch"}];
                 }
             }
@@ -1041,7 +1045,7 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         }
         
         // Compute content_hash for the file
-        NSString *const contentHash = _dropboxContentHashForFileAtPath(localPath);
+        NSString *const contentHash = _dropboxContentHashForData(TJDropboxFileContentHash(localPath));
         if (contentHash) {
             parameters[@"content_hash"] = contentHash;
         }
