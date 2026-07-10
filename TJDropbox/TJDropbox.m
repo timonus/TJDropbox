@@ -652,7 +652,10 @@ NSData *TJDropboxFileContentHash(NSString *const filePath) {
     }
     
     static const NSUInteger kBlockSize = 4 * 1024 * 1024; // 4 MB blocks
-    NSMutableData *blockHashes = [NSMutableData new];
+    
+    // Hash the concatenated block hashes
+    CC_SHA256_CTX hashContext;
+    CC_SHA256_Init(&hashContext);
     
     NSData *block;
     do {
@@ -662,13 +665,12 @@ NSData *TJDropboxFileContentHash(NSString *const filePath) {
             // Hash this block
             unsigned char blockHash[CC_SHA256_DIGEST_LENGTH];
             CC_SHA256(block.bytes, (CC_LONG)block.length, blockHash);
-            [blockHashes appendBytes:blockHash length:CC_SHA256_DIGEST_LENGTH];
+            CC_SHA256_Update(&hashContext, blockHash, CC_SHA256_DIGEST_LENGTH);
         }
     } while (block.length == kBlockSize);
-        
-        // Hash the concatenated block hashes
+    
     unsigned char finalHash[CC_SHA256_DIGEST_LENGTH];
-    CC_SHA256(blockHashes.bytes, (CC_LONG)blockHashes.length, finalHash);
+    CC_SHA256_Final(finalHash, &hashContext);
     
     return [NSData dataWithBytes:finalHash length:CC_SHA256_DIGEST_LENGTH];
 }
