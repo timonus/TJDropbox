@@ -1028,10 +1028,10 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
 
 + (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath credential:(TJDropboxCredential *const)credential completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
-    [self uploadFileAtPath:localPath toPath:remotePath overwriteExisting:NO muteDesktopNotifications:NO credential:credential progressBlock:nil completion:completion];
+    [self uploadFileAtPath:localPath toPath:remotePath contentHash:nil overwriteExisting:NO muteDesktopNotifications:NO credential:credential progressBlock:nil completion:completion];
 }
 
-+ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications credential:(TJDropboxCredential *const)credential progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
++ (void)uploadFileAtPath:(NSString *const)localPath toPath:(NSString *const)remotePath contentHash:(NSData *const)contentHash overwriteExisting:(const BOOL)overwriteExisting muteDesktopNotifications:(const BOOL)muteDesktopNotifications credential:(TJDropboxCredential *const)credential progressBlock:(void (^_Nullable const)(CGFloat progress))progressBlock completion:(void (^const)(NSDictionary *_Nullable parsedResponse, NSError *_Nullable error))completion
 {
     _addTask(credential,
              ^NSURLSessionTask *{
@@ -1045,7 +1045,11 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
         }
         
         // Compute content_hash for the file
-        NSString *const contentHash = _dropboxContentHashForData(TJDropboxFileContentHash(localPath));
+        NSData *contentHashBytes = contentHash;
+        if (contentHashBytes == nil) {
+            contentHashBytes = TJDropboxFileContentHash(localPath);
+        }
+        NSString *const contentHash = _dropboxContentHashForData(contentHashBytes);
         if (contentHash) {
             parameters[@"content_hash"] = contentHash;
         }
