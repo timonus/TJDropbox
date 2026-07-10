@@ -993,6 +993,14 @@ static NSURLRequest *_listFolderRequest(NSString *const filePath, NSString *cons
             NSData *const resultData = _resultDataForContentRequestResponse(response);
             _processResult(resultData, response, &error, &parsedResult);
             
+            // Verify content hash matches
+            NSString *contentHash = parsedResult[@"content_hash"];
+            if (!error && location && contentHash) {
+                if (![contentHash isEqual:_dropboxContentHashForFileAtPath(location.path)]) {
+                    error = [NSError errorWithDomain:TJDropboxErrorDomain code:0 userInfo:@{@"description": @"content_hash_mimatch"}];
+                }
+            }
+            
             if (!error && location) {
                 NSFileManager *fileManager = [NSFileManager defaultManager];
                 
