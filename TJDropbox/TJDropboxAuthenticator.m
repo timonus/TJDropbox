@@ -7,9 +7,7 @@
 
 #import "TJDropbox.h"
 #import "TJDropboxAuthenticator.h"
-
 #import <AuthenticationServices/AuthenticationServices.h>
-
 #if !defined(__IPHONE_12_0) || __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_12_0
 #import <SafariServices/SafariServices.h>
 #endif
@@ -31,8 +29,7 @@ __attribute__((objc_direct_members))
 @implementation TJDropboxAuthenticationOptions
 
 - (instancetype)initWithGenerateRefreshToken:(BOOL)generateRefreshToken
-                            bypassNativeAuth:(const BOOL)bypassNativeAuth
-{
+                            bypassNativeAuth:(const BOOL)bypassNativeAuth {
     if (self = [super init]) {
         _generateRefreshToken = generateRefreshToken;
         _bypassNativeAuth = bypassNativeAuth;
@@ -54,9 +51,11 @@ __attribute__((objc_direct_members))
 
 // DO NOT mark as Obj-C direct, will lead to exceptions.
 @interface TJDropboxAuthenticatorWebAuthenticationPresentationContextProvider : NSObject
+
 @end
 
 @implementation TJDropboxAuthenticatorWebAuthenticationPresentationContextProvider
+
 #pragma mark - ASWebAuthenticationPresentationContextProviding
 
 + (ASPresentationAnchor)presentationAnchorForWebAuthenticationSession:(ASWebAuthenticationSession *)session API_AVAILABLE(ios(13.0))
@@ -92,7 +91,7 @@ static void (^_tj_completion)(TJDropboxCredential *);
         completion(nil);
         return;
     }
-
+    
     NSString *const codeVerifier = options.bypassPKCE ? nil : [NSString stringWithFormat:@"%@-%@", [[NSUUID UUID] UUIDString], [[NSUUID UUID] UUIDString]];
     if (options.bypassNativeAuth) {
         [self authenticateUsingSafariWithClientIdentifier:clientIdentifier
@@ -123,20 +122,20 @@ static void (^_tj_completion)(TJDropboxCredential *);
 }
 
 + (void)authenticateUsingSafariWithClientIdentifier:(NSString *const)clientIdentifier
-                                      codeVerifier:(NSString *const)codeVerifier
-                              generateRefreshToken:(const BOOL)generateRefreshToken
+                                       codeVerifier:(NSString *const)codeVerifier
+                               generateRefreshToken:(const BOOL)generateRefreshToken
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunguarded-availability"
-                       presentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
+                        presentationContextProvider:(id<ASWebAuthenticationPresentationContextProviding>)presentationContextProvider
 #pragma clang diagnostic pop
-                                        completion:(void (^)(TJDropboxCredential *))completion
+                                         completion:(void (^)(TJDropboxCredential *))completion
 {
     NSURL *const url = [TJDropbox tokenAuthenticationURLWithClientIdentifier:clientIdentifier
                                                                  redirectURL:nil
                                                                 codeVerifier:codeVerifier
                                                         generateRefreshToken:generateRefreshToken];
     NSString *const redirectURLScheme = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier].scheme;
-
+    
     // Reference needs to be held as long as this is in progress, otherwise the UI disappears.
     static id session;
     void (^completionHandler)(NSURL *, NSError *) = ^(NSURL * _Nullable callbackURL, NSError * _Nullable error) {
@@ -145,11 +144,9 @@ static void (^_tj_completion)(TJDropboxCredential *);
                                     clientIdentifier:clientIdentifier
                                         codeVerifier:codeVerifier
                                           completion:completion];
-
         // Break reference so session is deallocated.
         session = nil;
     };
-
     if (@available(iOS 12.0, *)) {
         session = [[ASWebAuthenticationSession alloc] initWithURL:url
                                                 callbackURLScheme:redirectURLScheme
@@ -184,9 +181,9 @@ static void (^_tj_completion)(TJDropboxCredential *);
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
 {
     return [self tryHandleAuthenticationCallbackWithURL:url
-                                      clientIdentifier:_tj_clientIdentifier
-                                          codeVerifier:_tj_codeVerifier
-                                            completion:_tj_completion];
+                                       clientIdentifier:_tj_clientIdentifier
+                                           codeVerifier:_tj_codeVerifier
+                                             completion:_tj_completion];
 }
 
 + (BOOL)tryHandleAuthenticationCallbackWithURL:(NSURL *const)url
@@ -195,12 +192,10 @@ static void (^_tj_completion)(TJDropboxCredential *);
                                     completion:(void (^)(TJDropboxCredential *))completion
 {
     BOOL handledURL = NO;
-
     NSURL *const redirectURL = [TJDropbox defaultTokenAuthenticationRedirectURLWithClientIdentifier:clientIdentifier];
     NSString *const redirectURLScheme = redirectURL.scheme;
     if (url && redirectURLScheme && [url.absoluteString hasPrefix:redirectURLScheme]) {
         NSURLComponents *const components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:YES];
-
         NSString *code = nil;
         NSString *oauthCode = nil;
         NSString *oauthToken = nil;
@@ -263,14 +258,13 @@ static void (^_tj_completion)(TJDropboxCredential *);
         } else {
             completion(credential);
         }
-
+        
         _tj_clientIdentifier = nil;
         _tj_codeVerifier = nil;
         _tj_completion = nil;
-
+        
         handledURL = YES;
     }
-
     return handledURL;
 }
 
