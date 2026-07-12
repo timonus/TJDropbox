@@ -197,21 +197,40 @@ static void (^_tj_completion)(TJDropboxCredential *);
     if (url && redirectURLScheme && [url.absoluteString hasPrefix:redirectURLScheme]) {
         NSURLComponents *const components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:YES];
         NSString *code = nil;
-        BOOL codeIsAccessToken = NO;
+        NSString *oauthCode = nil;
+        NSString *oauthToken = nil;
+        NSString *oauthTokenSecret = nil;
+        NSString *state = nil;
+
         for (NSURLQueryItem *const queryItem in components.queryItems) {
             if ([queryItem.name isEqualToString:@"code"]) {
                 code = queryItem.value;
-                break;
-            } else if ([queryItem.name isEqualToString:@"state"] && [queryItem.value containsString:@"oauth2code"]) {
-                codeIsAccessToken = YES;
-                break;
+            } else if ([queryItem.name isEqualToString:@"oauth_code"]) {
+                oauthCode = queryItem.value;
+            } else if ([queryItem.name isEqualToString:@"oauth_token"]) {
+                oauthToken = queryItem.value;
+            } else if ([queryItem.name isEqualToString:@"oauth_token_secret"]) {
+                oauthTokenSecret = queryItem.value;
+            } else if ([queryItem.name isEqualToString:@"state"]) {
+                state = queryItem.value;
             }
         }
-        TJDropboxCredential *const credential = [TJDropbox credentialFromDropboxAppAuthenticationURL:url] ?: [TJDropbox credentialFromURL:url withClientIdentifier:clientIdentifier];
-        if (codeIsAccessToken) {
-            code = credential.accessToken;
+
+        if (code.length == 0 && codeVerifier) {
+            if (oauthCode.length > 0) {
+                // Modern Dropbox app DAuth code-flow callback.
+                code = oauthCode;
+            } else if (oauthTokenSecret.length > 0 && ([oauthToken isEqualToString:@"oauth2code:"] || [state containsString:@"oauth2code"])) {
+                // Legacy Dropbox app DAuth code-flow callback. In this shape the
+                // authorization code is carried in oauth_token_secret. The state
+                // fallback preserves TJDropbox's previous native-auth behavior.
+                code = oauthTokenSecret;
+            }
         }
-        if (code) {
+
+        TJDropboxCredential *const credential = code.length > 0 ? nil : ([TJDropbox credentialFromDropboxAppAuthenticationURL:url] ?: [TJDropbox credentialFromURL:url withClientIdentifier:clientIdentifier]);
+
+        if (code.length > 0) {
             if (codeVerifier) {
                 // Initiating requests while the app is entering the foreground often leads to failures since we're not using background tasks.
                 // Let's wait until we're definitely active to perform our auth request.
