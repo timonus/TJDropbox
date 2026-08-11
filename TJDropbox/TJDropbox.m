@@ -645,7 +645,7 @@ static NSString *_dropboxContentHashForData(NSData *const data) {
     return hexString;
 }
 
-NSData *TJDropboxFileContentHash(NSString *const filePath) {
+NSData * _Nullable TJDropboxFileContentHash(NSString *const filePath) {
     NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:filePath];
     if (!fileHandle) {
         return nil;
