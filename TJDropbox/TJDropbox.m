@@ -713,7 +713,11 @@ static NSURLSession *_session(void)
     dispatch_once(&onceToken, ^{
         TJDropboxURLSessionTaskDelegate *taskDelegate = _taskDelegate();
         NSURLSessionConfiguration *const configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
-        configuration.shouldUseExtendedBackgroundIdleMode = YES; // Allows requests to run better when the app is backgrounded https://twitter.com/BigZaphod/status/1164977540479553543
+#if defined(__IPHONE_18_4) && __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_18_4
+        if (@available(iOS 18.4, *)) { } else {
+            configuration.shouldUseExtendedBackgroundIdleMode = YES; // Allows requests to run better when the app is backgrounded https://twitter.com/BigZaphod/status/1164977540479553543
+        }
+#endif
 //        configuration.waitsForConnectivity = YES;
 //        configuration.timeoutIntervalForResource = 60;
         
