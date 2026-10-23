@@ -749,7 +749,7 @@ static void _addTask(TJDropboxCredential *credential,
                     }
                 };
                 if (credential.refreshCompletionBlocks) {
-                    [credential.refreshCompletionBlocks addObject:refreshErrorCompletion];
+                    [credential.refreshCompletionBlocks addObject:refreshCompletionBlock];
                 } else {
                     credential.refreshCompletionBlocks = [NSMutableArray arrayWithObject:refreshCompletionBlock];
                     _refreshCredential(credential, ^(NSDictionary * _Nullable parsedResponse, NSError * _Nullable error) {
